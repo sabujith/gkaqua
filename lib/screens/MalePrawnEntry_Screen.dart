@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+// MalePrawnScreen
+
 class MalePrawnScreen extends StatefulWidget {
   const MalePrawnScreen({super.key});
 
@@ -9,37 +11,65 @@ class MalePrawnScreen extends StatefulWidget {
 
 class _MalePrawnScreenState extends State<MalePrawnScreen> {
   final _formKey = GlobalKey<FormState>();
+
+  // Variables to capture user input
   String? selectedPond;
   String? selectedStatus;
   DateTime? selectedDateBroughtIn;
   DateTime? selectedUpdatedDate;
 
+  // TextEditingControllers for form fields
+  final TextEditingController locationController = TextEditingController();
+  final TextEditingController initialNumberController = TextEditingController();
+  final TextEditingController updatedNumberController = TextEditingController();
+  final TextEditingController completedMatingCycleController =
+      TextEditingController();
+  final TextEditingController notesController = TextEditingController();
+  final TextEditingController discardedValuesController =
+      TextEditingController();
+
   // Function to pick a date
   Future<void> _selectDate(BuildContext context, DateTime? initialDate,
       Function(DateTime) onDateSelected) async {
     final DateTime? picked = await showDatePicker(
-      context: context,
-      initialDate: initialDate ?? DateTime.now(),
-      firstDate: DateTime(2000),
-      lastDate: DateTime(2101),
-    );
+        context: context,
+        initialDate: initialDate ?? DateTime.now(),
+        firstDate: DateTime(2000),
+        lastDate: DateTime(2101));
+
     if (picked != null) {
       onDateSelected(picked);
     }
   }
 
   @override
+  void dispose() {
+    // Dispose the controllers when the widget is removed from the widget tree
+    locationController.dispose();
+    initialNumberController.dispose();
+    updatedNumberController.dispose();
+    completedMatingCycleController.dispose();
+    notesController.dispose();
+    discardedValuesController.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
+        backgroundColor: Colors.blue,
         shadowColor: Colors.blue,
         leading: BackButton(
+          color: Colors.white,
           onPressed: () {
-            Navigator.of(context)
-                .pop(); // To navigate back to the previous screen
+            Navigator.of(context).pop();
           },
         ),
-        title: const Text('Male Prawn Details'),
+        title: const Text(
+          'Male Prawn Details',
+          style: TextStyle(color: Colors.white),
+        ),
       ),
       body: Padding(
         padding: const EdgeInsets.all(16.0),
@@ -49,10 +79,7 @@ class _MalePrawnScreenState extends State<MalePrawnScreen> {
             children: [
               // Date Brought In
               Container(
-                decoration: BoxDecoration(
-                  border: Border.all(color: Colors.grey),
-                  borderRadius: BorderRadius.circular(5),
-                ),
+                decoration: BoxDecoration(border: Border.all(width: 1)),
                 child: ListTile(
                   title: Text(
                     "Date Brought In: ${selectedDateBroughtIn != null ? selectedDateBroughtIn!.toLocal().toString().split(' ')[0] : 'Select Date'}",
@@ -70,8 +97,9 @@ class _MalePrawnScreenState extends State<MalePrawnScreen> {
 
               // Location
               TextFormField(
+                controller: locationController,
                 decoration: InputDecoration(
-                    labelText: "Location",
+                    labelText: 'Location',
                     border:
                         OutlineInputBorder(borderSide: BorderSide(width: 1))),
                 validator: (value) {
@@ -81,13 +109,13 @@ class _MalePrawnScreenState extends State<MalePrawnScreen> {
                   return null;
                 },
               ),
-              SizedBox(height: 16),
+              const SizedBox(height: 16),
 
               // Pond Name Dropdown
               DropdownButtonFormField<String>(
                 value: selectedPond,
                 decoration: InputDecoration(
-                    labelText: "Pond Name",
+                    labelText: 'Pond Name',
                     border:
                         OutlineInputBorder(borderSide: BorderSide(width: 1))),
                 items: ["Pond 1", "Pond 2", "Pond 3"].map((String pond) {
@@ -102,66 +130,67 @@ class _MalePrawnScreenState extends State<MalePrawnScreen> {
                   });
                 },
                 validator: (value) {
-                  if (value == null) {
+                  if (value == null || value.isEmpty) {
                     return 'Please select a pond';
                   }
                   return null;
                 },
               ),
-              SizedBox(height: 16),
+              const SizedBox(height: 16),
 
-              // Initial Numbers
+              // Initial Number
               TextFormField(
+                controller: initialNumberController,
                 decoration: InputDecoration(
-                    labelText: "Initial Numbers",
+                    labelText: "Initial Number",
                     border:
                         OutlineInputBorder(borderSide: BorderSide(width: 1))),
                 keyboardType: TextInputType.number,
                 validator: (value) {
                   if (value == null || value.isEmpty) {
-                    return 'Please enter initial numbers';
+                    return "Please enter Initial number";
                   }
                   return null;
                 },
               ),
-              SizedBox(height: 16),
+              const SizedBox(height: 16),
 
               // Updated Numbers
               TextFormField(
+                controller: updatedNumberController,
                 decoration: InputDecoration(
-                    labelText: "Updated Numbers",
-                    border:
-                        OutlineInputBorder(borderSide: BorderSide(width: 1))),
+                  labelText: "Updated Numbers",
+                  border: OutlineInputBorder(borderSide: BorderSide(width: 1)),
+                ),
                 keyboardType: TextInputType.number,
                 validator: (value) {
                   if (value == null || value.isEmpty) {
-                    return 'Please enter updated numbers';
+                    return "Please enter Updated Number";
                   }
                   return null;
                 },
               ),
-              SizedBox(height: 16),
+              const SizedBox(height: 16),
 
               // Numbers Updated Date
               Container(
                 decoration: BoxDecoration(
-                  border: Border.all(color: Colors.grey),
-                  borderRadius: BorderRadius.circular(5),
-                ),
+                    border: Border.all(color: Colors.grey),
+                    borderRadius: BorderRadius.circular(5)),
                 child: ListTile(
                   title: Text(
-                    "Numbers Updated Date: ${selectedUpdatedDate != null ? selectedUpdatedDate!.toLocal().toString().split(' ')[0] : 'Select Date'}",
-                  ),
-                  trailing: Icon(Icons.calendar_today),
-                  onTap: () =>
-                      _selectDate(context, selectedUpdatedDate, (date) {
-                    setState(() {
-                      selectedUpdatedDate = date;
+                      "Numbers Updated Date: ${selectedUpdatedDate != null ? selectedUpdatedDate!.toLocal().toString().split(" ")[0] : 'Select Date'}"),
+                  trailing: Icon(Icons.calendar_month),
+                  onTap: () {
+                    _selectDate(context, selectedUpdatedDate, (date) {
+                      setState(() {
+                        selectedUpdatedDate = date;
+                      });
                     });
-                  }),
+                  },
                 ),
               ),
-              SizedBox(height: 16),
+              const SizedBox(height: 16),
 
               // Status Dropdown
               DropdownButtonFormField<String>(
@@ -170,10 +199,11 @@ class _MalePrawnScreenState extends State<MalePrawnScreen> {
                     labelText: "Status",
                     border:
                         OutlineInputBorder(borderSide: BorderSide(width: 1))),
-                items: ["NEW", "Combined", "Discarded"].map((String status) {
-                  return DropdownMenuItem<String>(
-                    value: status,
+                items:
+                    ["New", "Combined", "Again Something"].map((String status) {
+                  return DropdownMenuItem(
                     child: Text(status),
+                    value: status,
                   );
                 }).toList(),
                 onChanged: (String? newValue) {
@@ -182,54 +212,90 @@ class _MalePrawnScreenState extends State<MalePrawnScreen> {
                   });
                 },
                 validator: (value) {
-                  if (value == null) {
-                    return 'Please select a status';
+                  if (value == null || value.isEmpty) {
+                    return "Please enter the status";
                   }
                   return null;
                 },
               ),
-              SizedBox(height: 16),
+              const SizedBox(height: 16),
 
               // Completed Mating Cycle
               TextFormField(
+                controller: completedMatingCycleController,
                 decoration: InputDecoration(
                     labelText: "Completed Mating Cycle",
                     border:
                         OutlineInputBorder(borderSide: BorderSide(width: 1))),
                 keyboardType: TextInputType.number,
               ),
-              SizedBox(height: 16),
+              const SizedBox(height: 16),
 
               // Notes
               TextFormField(
+                controller: notesController,
                 decoration: InputDecoration(
                     labelText: "Notes",
                     border:
                         OutlineInputBorder(borderSide: BorderSide(width: 1))),
                 maxLines: 4,
               ),
-              SizedBox(height: 16),
+              const SizedBox(height: 16),
 
               // Discarded Values
               TextFormField(
+                controller: discardedValuesController,
                 decoration: InputDecoration(
                     labelText: "Discarded Values",
                     border:
                         OutlineInputBorder(borderSide: BorderSide(width: 1))),
                 keyboardType: TextInputType.number,
               ),
-              SizedBox(height: 20),
+              const SizedBox(height: 16),
 
               ElevatedButton(
+                style: ElevatedButton.styleFrom(backgroundColor: Colors.blue),
                 onPressed: () {
-                  // Handle form submission here
                   if (_formKey.currentState!.validate()) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(content: Text('Form submitted successfully!')),
-                    );
+                    // Show submission message with all the input values
+                    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                      content: Text(
+                        "Form Submitted Successfully!\n"
+                        "Location: ${locationController.text}\n"
+                        "Pond: ${selectedPond ?? 'Not selected'}\n"
+                        "Initial Number: ${initialNumberController.text}\n"
+                        "Updated Numbers: ${updatedNumberController.text}\n"
+                        "Date Brought In: ${selectedDateBroughtIn != null ? selectedDateBroughtIn!.toLocal().toString().split(' ')[0] : 'Not selected'}\n"
+                        "Numbers Updated Date: ${selectedUpdatedDate != null ? selectedUpdatedDate!.toLocal().toString().split(' ')[0] : 'Not selected'}\n"
+                        "Status: ${selectedStatus ?? 'Not selected'}\n"
+                        "Completed Mating Cycle: ${completedMatingCycleController.text}\n"
+                        "Notes: ${notesController.text}\n"
+                        "Discarded Values: ${discardedValuesController.text}",
+                      ),
+                    ));
+
+                    // Clear the form fields after submission
+                    locationController.clear();
+                    initialNumberController.clear();
+                    updatedNumberController.clear();
+                    completedMatingCycleController.clear();
+                    notesController.clear();
+                    discardedValuesController.clear();
+                    setState(() {
+                      selectedPond = null;
+                      selectedStatus = null;
+                      selectedDateBroughtIn = null;
+                      selectedUpdatedDate = null;
+                    });
+
+                    // Optionally, you can also reset the form
+                    _formKey.currentState!.reset();
                   }
                 },
-                child: Text("Submit"),
+                child: Text(
+                  'SUBMIT',
+                  style: TextStyle(color: Colors.white),
+                ),
               ),
             ],
           ),

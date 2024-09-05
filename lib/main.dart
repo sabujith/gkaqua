@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:gk_aqua/Index_Screen.dart';
+import 'package:gk_aqua/screens/BroodStockIndex_Screen.dart';
 
 //importing pages
 import 'package:gk_aqua/screens/MalePrawnEntry_Screen.dart';
@@ -14,7 +16,18 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      home: FemalePrawnScreen(),
+      home: IndexScreen(),
+      routes: {
+        'AddMP': (context) {
+          return MalePrawnScreen();
+        },
+        'AddFP': (context) {
+          return FemalePrawnScreen();
+        },
+        'BroodstockIndex': (context) {
+          return BroodstockindexScreen();
+        }
+      },
     );
   }
 }
