@@ -33,7 +33,12 @@ class IndexScreen extends StatelessWidget {
                   onPressed: () {
                     Navigator.of(context).pushNamed('AddFP');
                   },
-                  child: Text('NFP'))
+                  child: Text('NFP')),
+              ElevatedButton(
+                  onPressed: () {
+                    Navigator.of(context).pushNamed('BroodingTanks');
+                  },
+                  child: Text('Brooding Tanks'))
             ],
           ),
         ),

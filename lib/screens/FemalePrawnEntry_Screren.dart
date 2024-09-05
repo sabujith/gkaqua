@@ -253,7 +253,12 @@ class _FemalePrawnScreenState extends State<FemalePrawnScreen> {
 
               ElevatedButton(
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.blue,
+                  backgroundColor:
+                      Colors.blue.withOpacity(0.8), // Add transparency
+                  minimumSize: Size(double.infinity, 50),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(5),
+                  ),
                 ),
                 onPressed: () {
                   if (_formKey.currentState!.validate()) {

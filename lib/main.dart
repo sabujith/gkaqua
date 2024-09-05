@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:gk_aqua/Index_Screen.dart';
 import 'package:gk_aqua/screens/BroodStockIndex_Screen.dart';
+import 'package:gk_aqua/screens/BroodingTanks_Screen.dart';
 
 //importing pages
 import 'package:gk_aqua/screens/MalePrawnEntry_Screen.dart';
@@ -26,6 +27,9 @@ class MyApp extends StatelessWidget {
         },
         'BroodstockIndex': (context) {
           return BroodstockindexScreen();
+        },
+        'BroodingTanks': (context) {
+          return BroodingtanksScreen();
         }
       },
     );

@@ -254,7 +254,14 @@ class _MalePrawnScreenState extends State<MalePrawnScreen> {
               const SizedBox(height: 16),
 
               ElevatedButton(
-                style: ElevatedButton.styleFrom(backgroundColor: Colors.blue),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor:
+                      Colors.blue.withOpacity(0.8), // Add transparency
+                  minimumSize: Size(double.infinity, 50),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(5),
+                  ),
+                ),
                 onPressed: () {
                   if (_formKey.currentState!.validate()) {
                     // Show submission message with all the input values
