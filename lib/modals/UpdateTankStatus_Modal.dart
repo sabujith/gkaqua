@@ -28,7 +28,8 @@ class _UpdateTankStatusModalState extends State<UpdateTankStatusModal> {
               ),
               const SizedBox(height: 16),
               DropdownButtonFormField<String>(
-                decoration: const InputDecoration(labelText: 'Select Status'),
+                decoration: const InputDecoration(
+                    labelText: 'Select Status', border: OutlineInputBorder()),
                 items: ['Empty', 'Mating', 'Resting']
                     .map((status) => DropdownMenuItem<String>(
                           value: status,
