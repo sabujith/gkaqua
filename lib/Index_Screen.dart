@@ -1,4 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:gk_aqua/modals/Mortality_Modal.dart';
+import 'package:gk_aqua/modals/UpdatePrawnStatus_Modal.dart';
+import 'package:gk_aqua/modals/UpdateTankStatus_Modal.dart';
 
 class IndexScreen extends StatelessWidget {
   const IndexScreen({super.key});
@@ -38,7 +41,36 @@ class IndexScreen extends StatelessWidget {
                   onPressed: () {
                     Navigator.of(context).pushNamed('BroodingTanks');
                   },
-                  child: Text('Brooding Tanks'))
+                  child: Text('Brooding Tanks')),
+              ElevatedButton(
+                  onPressed: () {
+                    showModalBottomSheet(
+                      context: context,
+                      builder: (BuildContext context) {
+                        return const UpdateTankStatusModal(); // Call the modal
+                      },
+                    );
+                  },
+                  child: Text('Update tank status')),
+              ElevatedButton(
+                  onPressed: () {
+                    showModalBottomSheet(
+                      context: context,
+                      builder: (BuildContext context) {
+                        return const MortalityModal(); // Call the modal
+                      },
+                    );
+                  },
+                  child: Text('Mortality')),
+              ElevatedButton(
+                  onPressed: () {
+                    showModalBottomSheet(
+                        context: context,
+                        builder: (BuildContext context) {
+                          return const UpdateprawnstatusModal();
+                        });
+                  },
+                  child: Text('Update Prawn Status'))
             ],
           ),
         ),

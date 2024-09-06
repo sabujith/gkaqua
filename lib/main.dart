@@ -30,7 +30,7 @@ class MyApp extends StatelessWidget {
         },
         'BroodingTanks': (context) {
           return BroodingtanksScreen();
-        }
+        },
       },
     );
   }
