@@ -1,0 +1,12 @@
+Create an application in Laravel
+1.Homepage  -  Photo -  Name
+2.About     -  About that person
+3.Career / Top Movies/  Top songs 
+
+
+1. Create 3 routes with name
+2. Create 1 Controller  - SachinController,MohanlalController,MammoottyCOntroller
+3. Create 3 functions in the controller
+4. Pass data to the 3rd view(Career / Top Movies/  Top songs 
+	) from the controller as an associative array
+5.Create navigation in each page
