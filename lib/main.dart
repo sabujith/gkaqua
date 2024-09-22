@@ -17,6 +17,14 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
+      theme: ThemeData(
+        inputDecorationTheme: InputDecorationTheme(
+          focusedBorder: OutlineInputBorder(
+            borderSide: BorderSide(color: Colors.blue, width: 2),
+          ),
+          labelStyle: TextStyle(color: Colors.blue),
+        ),
+      ),
       home: IndexScreen(),
       routes: {
         'AddMP': (context) {

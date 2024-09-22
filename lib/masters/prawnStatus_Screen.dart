@@ -26,9 +26,26 @@ class _PrawnstatusScreenState extends State<PrawnstatusScreen> {
     return Scaffold(
       appBar: AppBar(
         backgroundColor: Colors.blue,
-        leading: IconButton(onPressed: () {}, icon: const Icon(Icons.menu)),
-        title: const Text('Update Prawn Status'),
-        actions: const [Icon(Icons.account_circle)],
+        leading: IconButton(
+            onPressed: () {},
+            icon: const Icon(
+              Icons.menu,
+              color: Colors.white,
+            )),
+        title: const Text(
+          'Update Prawn Status',
+          style: TextStyle(color: Colors.white),
+        ),
+        actions: const [
+          Padding(
+            padding: EdgeInsets.all(8.0),
+            child: Icon(
+              Icons.account_circle,
+              color: Colors.white,
+              size: 30,
+            ),
+          )
+        ],
       ),
       body: Padding(
         padding: const EdgeInsets.all(16.0),
@@ -69,8 +86,16 @@ class _PrawnstatusScreenState extends State<PrawnstatusScreen> {
 
                   // Submit button
                   ElevatedButton(
+                    style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.blue,
+                        minimumSize: Size(double.infinity, 50),
+                        shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(5))),
                     onPressed: _submitForm,
-                    child: const Text('Submit'),
+                    child: const Text(
+                      'Submit',
+                      style: TextStyle(color: Colors.white),
+                    ),
                   ),
                   const SizedBox(height: 20),
                 ],
@@ -100,18 +125,18 @@ class _PrawnstatusScreenState extends State<PrawnstatusScreen> {
                 itemBuilder: (context, index) {
                   return ListTile(
                     title: Text(_prawnStatuses[index]['status']!),
-                    subtitle: Text(_prawnStatuses[index]['note']!),
+                    subtitle: Text('( ${_prawnStatuses[index]['note']!} )'),
                     trailing: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         IconButton(
-                          icon: const Icon(Icons.edit, color: Colors.blue),
+                          icon: const Icon(Icons.edit),
                           onPressed: () {
                             _editPrawnStatus(index);
                           },
                         ),
                         IconButton(
-                          icon: const Icon(Icons.delete, color: Colors.blue),
+                          icon: const Icon(Icons.delete),
                           onPressed: () {
                             _confirmDelete(
                                 index); // Call the confirmation dialog
