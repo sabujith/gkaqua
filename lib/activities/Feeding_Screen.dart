@@ -56,8 +56,8 @@ class _FeedingScreenState extends State<FeedingScreen> {
     return ['Blood Worm', 'Squid'];
   }
 
-  // Function to select date and time
-  Future<void> _selectDateTime() async {
+  // Function to select date
+  Future<void> _selectDate() async {
     DateTime? picked = await showDatePicker(
       context: context,
       initialDate: DateTime.now(),
@@ -152,8 +152,7 @@ class _FeedingScreenState extends State<FeedingScreen> {
                           borderRadius: BorderRadius.circular(5),
                         ),
                       ),
-                      onPressed:
-                          _selectDateTime, // Your date selection function
+                      onPressed: _selectDate, // Your date selection function
                       child: Text(
                         style: TextStyle(color: Colors.blue),
                         selectedDate == null
@@ -387,10 +386,7 @@ class _FeedingScreenState extends State<FeedingScreen> {
                           borderRadius: BorderRadius.circular(5))),
                   onPressed: () {
                     // Save action
-                    if (_formKey.currentState!.validate()) {
-                    } else {
-                      print("Missed some input fields");
-                    }
+                    submitFeeding();
                   },
                   child: const Text(
                     'Save',
@@ -403,5 +399,44 @@ class _FeedingScreenState extends State<FeedingScreen> {
         ),
       ),
     );
+  }
+
+  void submitFeeding() {
+    if (_formKey.currentState!.validate() &&
+        selectedDate != null &&
+        selectedTime != null) {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          backgroundColor: Colors.green,
+          behavior: SnackBarBehavior.floating,
+          margin: EdgeInsets.all(10),
+          content: Container(
+            child: Column(
+              children: [
+                Text(
+                    "$selectedDate $selectedDepartment $selectedTime $selectedDivision $selectedTankCode $selectedFeedType $quantity $unit $expiry"),
+              ],
+            ),
+          )));
+
+      setState(() {
+        selectedDate = null;
+        selectedTime = null;
+        selectedDepartment = null;
+        selectedDivision = null;
+        selectedTankCode = null;
+        selectedFeedType = null;
+        quantity = null;
+        expiry = null;
+      });
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          backgroundColor: Colors.red,
+          behavior: SnackBarBehavior.floating,
+          margin: EdgeInsets.all(10),
+          content: Text('Please fill out all the fields'),
+        ),
+      );
+    }
   }
 }

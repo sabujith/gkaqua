@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:gk_aqua/activities/Feeding_Screen.dart';
+import 'package:gk_aqua/activities/WaterQualityCheck_Screen.dart';
 import 'package:gk_aqua/masters/prawnStatus_Screen.dart';
 import 'package:gk_aqua/modals/Mortality_Modal.dart';
 import 'package:gk_aqua/modals/UpdatePrawnStatus_Modal.dart';
@@ -88,7 +89,15 @@ class IndexScreen extends StatelessWidget {
                       return FeedingScreen();
                     }));
                   },
-                  child: Text('Activity - Feeding'))
+                  child: Text('Activity - Feeding')),
+              ElevatedButton(
+                  onPressed: () {
+                    Navigator.of(context)
+                        .push(MaterialPageRoute(builder: (context) {
+                      return WaterQualityCheckScreen();
+                    }));
+                  },
+                  child: Text('Activity - Water Quality Check'))
             ],
           ),
         ),
