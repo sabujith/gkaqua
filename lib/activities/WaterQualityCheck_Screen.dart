@@ -85,7 +85,9 @@ class _WaterQualityCheckScreenState extends State<WaterQualityCheckScreen> {
       appBar: AppBar(
         backgroundColor: Colors.blue,
         leading: IconButton(
-          onPressed: () {},
+          onPressed: () {
+            Navigator.of(context).pop();
+          },
           icon: const Icon(
             Icons.menu,
             color: Colors.white,
