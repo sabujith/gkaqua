@@ -250,6 +250,7 @@ class _BroodstockMortalityActivityScreenState
       try {
         var response =
             await broodstockMortalityService.createMortality(requestData);
+        print(response);
 
         if (response.statusCode == 201) {
           showDialog(

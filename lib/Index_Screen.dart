@@ -4,12 +4,15 @@ import 'package:gk_aqua/activities/Feeding_Screen.dart';
 import 'package:gk_aqua/activities/HatcheryMortality_Screen.dart';
 import 'package:gk_aqua/activities/ResponsiveFeeding_Screen.dart';
 import 'package:gk_aqua/activities/WaterQualityCheck_Screen.dart';
+import 'package:gk_aqua/masters/TestingScree.dart';
 import 'package:gk_aqua/masters/prawnStatus_Screen.dart';
 import 'package:gk_aqua/modals/Mortality_Modal.dart';
 import 'package:gk_aqua/modals/UpdatePrawnStatus_Modal.dart';
 import 'package:gk_aqua/modals/UpdateTankStatus_Modal.dart';
 import 'package:gk_aqua/screens/activities/BroodstockMortalityActivityScreen.dart';
 import 'package:gk_aqua/screens/activities/HatcheryMortalityActivityScreen.dart';
+import 'package:gk_aqua/screens/activities/LarvaeCollectionActivityScreen.dart';
+import 'package:gk_aqua/screens/activities/TopupActivityScreen.dart';
 import 'package:gk_aqua/screens/masters/department.dart';
 import 'package:gk_aqua/screens/masters/employeeAddMasterScreen.dart';
 import 'package:gk_aqua/screens/masters/unitMasterScreen.dart';
@@ -83,6 +86,37 @@ class IndexScreen extends StatelessWidget {
                         });
                   },
                   child: Text('Update Prawn Status')),
+              const Row(
+                children: [
+                  Text(
+                    "Testing Screens",
+                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
+                  ),
+                ],
+              ),
+              Container(
+                width: double.infinity,
+                decoration: BoxDecoration(
+                    color: Colors.red[100],
+                    borderRadius: BorderRadius.circular(5)),
+                child: Padding(
+                  padding: EdgeInsets.all(8.0),
+                  child: Wrap(
+                    spacing: 5,
+                    runSpacing: 5,
+                    children: [
+                      ElevatedButton(
+                          onPressed: () {
+                            Navigator.of(context)
+                                .push(MaterialPageRoute(builder: (context) {
+                              return TestingScreen();
+                            }));
+                          },
+                          child: Text("Multiple Form Validation")),
+                    ],
+                  ),
+                ),
+              ),
               const Row(
                 children: [
                   Text(
@@ -290,6 +324,26 @@ class IndexScreen extends StatelessWidget {
                         },
                         child: Text('Hatchery Mortality'),
                       ),
+                      ElevatedButton(
+                        onPressed: () {
+                          Navigator.of(context).push(MaterialPageRoute(
+                            builder: (context) {
+                              return ActivityTopup();
+                            },
+                          ));
+                        },
+                        child: Text('Topup'),
+                      ),
+                      ElevatedButton(
+                        onPressed: () {
+                          Navigator.of(context).push(MaterialPageRoute(
+                            builder: (context) {
+                              return LarvaeCollection();
+                            },
+                          ));
+                        },
+                        child: Text('Larvae Collection'),
+                      )
                     ],
                   ),
                 ),
