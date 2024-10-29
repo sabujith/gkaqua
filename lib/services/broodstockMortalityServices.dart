@@ -82,7 +82,7 @@ class BroodstockMortalityService {
     }
   }
 
-// Fetch mortalities based on department, division, tank, and date range
+  // Fetch mortalities based on department, division, tank, and date range
   Future<Map<String, dynamic>> fetchMortalities({
     int? departmentId,
     int? divisionId,

@@ -176,7 +176,7 @@ class _WaterparametersformState extends State<Waterparametersform> {
       _parameterCodeController.text = waterparameter.parameter_code!;
       _startDateController.text = waterparameter.start_date!;
       _endDateController.text = waterparameter.end_date!;
-      _noteController.text = waterparameter.notes!;
+      _noteController.text = waterparameter.notes ?? '';
       _selectedUnit = _units.firstWhere(
           (unit) => unit.id == waterparameter.unit_id,
           orElse: () => 0 as UnitModel);

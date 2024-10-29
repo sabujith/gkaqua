@@ -167,8 +167,11 @@ class _BroodstockMortalityActivityScreenState
           tanks = fetchedTanks;
         });
       } else {
-        List<TankModel> fetchedTanks = await tankService.fetchTanksByDivisionId(
-            id: _selectedDivision!.id!);
+        List<TankModel> fetchedTanks =
+            await tankService.fetchTanksByDepartmentDivisionStatus(
+                departmentId: _selectedDepartment!.id,
+                divisionId: _selectedDivision!.id!,
+                status: "Mating");
 
         setState(() {
           tanks = fetchedTanks;
@@ -177,7 +180,7 @@ class _BroodstockMortalityActivityScreenState
       print(tanks);
     } catch (e) {
       bool isTankUnavailable =
-          e.toString().contains('No Tanks found under this Division');
+          e.toString().contains('No Tanks found under this Criteria');
 
       if (isTankUnavailable) {
         setState(() {
@@ -278,12 +281,14 @@ class _BroodstockMortalityActivityScreenState
         showDialog(
           context: context,
           builder: (BuildContext context) {
-            return SimpleDialog(
-              title: const Text('Error'),
-              children: <Widget>[
-                Text(e.toString()),
-              ],
-            );
+            return SimpleDialog(title: const Text('Error'), children: [
+              SimpleDialogOption(
+                onPressed: () {
+                  Navigator.pop(context);
+                },
+                child: Text(e.toString()),
+              )
+            ]);
           },
         );
       }

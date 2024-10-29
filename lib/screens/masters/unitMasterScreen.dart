@@ -181,7 +181,7 @@ class _unitMasterScreenState extends State<unitMasterScreen> {
       selectedUnit = unit;
       _unitController.text = unit.unit_name;
       _unitCodeController.text = unit.unit_code;
-      _noteController.text = unit.notes!;
+      _noteController.text = unit.notes ?? '';
       _startDateController.text = unit.start_date!;
       _endDateController.text = unit.end_date!;
     });

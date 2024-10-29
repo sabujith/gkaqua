@@ -88,7 +88,30 @@ class TankService {
             .map<TankModel>((json) => TankModel.fromJson(json))
             .toList();
       } else {
-        throw 'No Tanks found under this Division';
+        throw 'No Tanks found under this Criteria';
+      }
+    } catch (error) {
+      throw error;
+    }
+  }
+
+  //Get all tanks by department id, by division id and status
+  Future<List<TankModel>> fetchTanksByDepartmentDivisionStatus({
+    required int departmentId,
+    required int divisionId,
+    required String status,
+  }) async {
+    var url = Uri.parse(
+        'http://127.0.0.1:8000/api/tanks/$departmentId/$divisionId/$status');
+    try {
+      var response = await http.get(url);
+      if (response.statusCode == 200) {
+        var jsonData = jsonDecode(response.body);
+        return jsonData
+            .map<TankModel>((json) => TankModel.fromJson(json))
+            .toList();
+      } else {
+        throw 'No Tanks found under this Criteria';
       }
     } catch (error) {
       throw error;

@@ -34,7 +34,7 @@ class LarvaeCollectionService {
   //create larva collection tank
   Future<http.Response> createLarvaeCollection(
       Map<String, dynamic> requestData) async {
-    var url = Uri.parse(apiUrl);
+    var url = Uri.parse('http://127.0.0.1:8000/api/larva-collection-tanks');
     try {
       var response = await http.post(
         url,

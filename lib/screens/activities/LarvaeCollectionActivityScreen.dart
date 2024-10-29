@@ -133,7 +133,6 @@ class _LarvaeCollectionActivityScreenState
   // Get divisions
   Future<void> _getDivisions({int? departmentId, String? divName}) async {
     DivisionServices divisionServices = DivisionServices();
-    print(divName);
     try {
       if (departmentId == null && divName == null) {
         // Fetch all divisions when no department ID or divisions list is provided
@@ -246,10 +245,9 @@ class _LarvaeCollectionActivityScreenState
 
   // Function to calculate and set total count
   void _calculateTotalCount() {
-    double larvaeCount = double.tryParse(_countController.text) ?? 0;
-    double countMultiplier =
-        double.tryParse(_countMuliplierController.text) ?? 1;
-    double totalCount = larvaeCount * countMultiplier;
+    int larvaeCount = int.tryParse(_countController.text) ?? 0;
+    int countMultiplier = int.tryParse(_countMuliplierController.text) ?? 1;
+    int totalCount = larvaeCount * countMultiplier;
 
     setState(() {
       _totalCountController.text = totalCount.toString();
@@ -261,6 +259,11 @@ class _LarvaeCollectionActivityScreenState
     LarvaeCollectionService larvaeCollectionService = LarvaeCollectionService();
 
     if (_formKey.currentState!.validate()) {
+      //converting three count into int
+      int larvaCount = int.parse(_countController.text) ?? 0;
+      int countMultiplier = int.parse(_countMuliplierController.text) ?? 0;
+      int totalCount = int.parse(_totalCountController.text) ?? 0;
+
       String? employee_code = _userId;
       String? date = _dateController.text;
 
@@ -279,9 +282,9 @@ class _LarvaeCollectionActivityScreenState
       int? target_tank_id = _selectedTargetTank!.id;
       String? target_batch_id = _targetBatchController.text;
 
-      String? count = _countController.text;
-      String? count_multiplier = _countMuliplierController.text;
-      String? total_count = _totalCountController.text;
+      int? count = larvaCount;
+      int? count_multiplier = countMultiplier;
+      int? total_count = totalCount;
       String? notes = _noteController.text;
 
       Map<String, dynamic> requestData = {
@@ -290,15 +293,15 @@ class _LarvaeCollectionActivityScreenState
         'hatching1_department_id': hatching1_department_id,
         'hatching1_division_id': hatching1_division_id,
         'hatching1_tank_id': hatching1_tank_id,
-        'hatching1_batch_id': hatching1_batch_id,
+        'hatching1_batch': hatching1_batch_id,
         'hatching2_department_id': hatching2_department_id,
         'hatching2_division_id': hatching2_division_id,
         'hatching2_tank_id': hatching2_tank_id,
-        'hatching2_batch_id': hatching2_batch_id,
+        'hatching2_batch': hatching2_batch_id,
         'target_department_id': target_department_id,
         'target_division_id': target_division_id,
         'target_tank_id': target_tank_id,
-        'target_batch_id': target_batch_id,
+        'target_batch': target_batch_id,
         'count': count,
         'count_multiplier': count_multiplier,
         'total_count': total_count,
@@ -315,15 +318,6 @@ class _LarvaeCollectionActivityScreenState
             builder: (context) => AlertDialog(
               title: const Text('Success'),
               content: const Text('Larvae Collection added successfully!'),
-              actions: [
-                TextButton(
-                  child: const Text('OK'),
-                  onPressed: () {
-                    Navigator.pop(context);
-                    Navigator.pop(context);
-                  },
-                ),
-              ],
             ),
           );
 
@@ -372,7 +366,7 @@ class _LarvaeCollectionActivityScreenState
           ),
         ),
         title: const Text(
-          'Activity/Topup',
+          'Activity/Larvae Collection',
           style: TextStyle(color: Colors.white),
         ),
         actions: const [
@@ -388,514 +382,1762 @@ class _LarvaeCollectionActivityScreenState
       ),
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
-          : SingleChildScrollView(
-              child: Padding(
-                padding: const EdgeInsets.all(16.0),
-                child: Form(
-                  key: _formKey,
-                  child: Column(
-                    children: [
-                      //user id Row
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
+          : LayoutBuilder(builder: (context, constraints) {
+              if (constraints.maxWidth > 1200) {
+                return _desktopView();
+              } else if (constraints.maxWidth > 600) {
+                return _tabletView();
+              } else {
+                return _mobileView();
+              }
+            }),
+    );
+  }
+
+  Widget _desktopView() {
+    return SingleChildScrollView(
+      child: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Form(
+          key: _formKey,
+          child: Column(
+            children: [
+              //user id Row
+              Row(
+                mainAxisAlignment: MainAxisAlignment.start,
+                children: [
+                  Text('User Id: $_userId',
+                      style: TextStyle(fontWeight: FontWeight.bold))
+                ],
+              ),
+              const SizedBox(height: 10),
+
+              //Date Row
+              Row(
+                mainAxisAlignment: MainAxisAlignment.start,
+                children: [
+                  Expanded(
+                    flex: 1,
+                    child: TextFormField(
+                      controller: _dateController,
+                      decoration: const InputDecoration(
+                          labelText: 'Date',
+                          border: OutlineInputBorder(),
+                          suffixIcon: Icon(Icons.calendar_month)),
+                      validator: (value) {
+                        if (value == null || value.isEmpty) {
+                          return 'Please enter date';
+                        }
+                        return null;
+                      },
+                      readOnly: true,
+                      onTap: () => _selectDate(context, _dateController),
+                    ),
+                  ),
+                  Expanded(
+                    flex: 2,
+                    child: SizedBox(width: 10),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 20),
+
+              //Hatching 1, Hatching 2 and Target Row
+              Row(
+                children: [
+                  //Hatching 1 Details container
+                  Expanded(
+                    child: Container(
+                      padding: const EdgeInsets.all(8.0),
+                      width: double.infinity,
+                      decoration: BoxDecoration(
+                        border: Border.all(
+                          color: Colors.blue,
+                        ),
+                        borderRadius: BorderRadius.circular(5.0),
+                      ),
+                      child: Column(
                         children: [
-                          Text('User Id: $_userId',
-                              style: TextStyle(fontWeight: FontWeight.bold))
-                        ],
-                      ),
-                      const SizedBox(height: 10),
-
-                      //Date
-                      TextFormField(
-                        controller: _dateController,
-                        decoration: const InputDecoration(
-                            labelText: 'Date',
-                            border: OutlineInputBorder(),
-                            suffixIcon: Icon(Icons.calendar_month)),
-                        readOnly: true,
-                        onTap: () => _selectDate(context, _dateController),
-                      ),
-                      const SizedBox(height: 20),
-
-                      //Hatching 1 Details container
-                      Container(
-                        padding: const EdgeInsets.all(8.0),
-                        width: double.infinity,
-                        decoration: BoxDecoration(
-                          border: Border.all(
-                            color: Colors.blue,
+                          const Text(
+                            'Hatching Tank 1 Details',
+                            style: TextStyle(fontWeight: FontWeight.bold),
                           ),
-                          borderRadius: BorderRadius.circular(5.0),
-                        ),
-                        child: Column(
-                          children: [
-                            const Text(
-                              'Hatching Tank 1 Details',
-                              style: TextStyle(fontWeight: FontWeight.bold),
+                          const SizedBox(height: 10),
+
+                          //Department 1 Dropdown
+                          DropdownButtonFormField<Department>(
+                            value: _selectedHatching1Department,
+                            onChanged: (Department? newValue) {
+                              setState(() {
+                                _selectedHatching1Department = newValue;
+                                _selectedHatching1Division = null;
+                                _selectedHatching1Tank = null;
+                              });
+                              _getDivisions(
+                                  departmentId: newValue?.id, divName: "div1");
+                            },
+                            items: hatching1Departments
+                                .map<DropdownMenuItem<Department>>(
+                                    (Department department) {
+                              return DropdownMenuItem<Department>(
+                                value: department,
+                                child: Text(department.departmentName),
+                              );
+                            }).toList(),
+                            decoration: const InputDecoration(
+                              labelText: 'Hatching 1 Department',
+                              border: OutlineInputBorder(),
                             ),
-                            const SizedBox(height: 10),
-
-                            //Department 1 Dropdown
-                            DropdownButtonFormField<Department>(
-                              value: _selectedHatching1Department,
-                              onChanged: (Department? newValue) {
-                                setState(() {
-                                  _selectedHatching1Department = newValue;
-                                  _selectedHatching1Division = null;
-                                  _selectedHatching1Tank = null;
-                                });
-                                _getDivisions(
-                                    departmentId: newValue?.id,
-                                    divName: "div1");
-                              },
-                              items: hatching1Departments
-                                  .map<DropdownMenuItem<Department>>(
-                                      (Department department) {
-                                return DropdownMenuItem<Department>(
-                                  value: department,
-                                  child: Text(department.departmentName),
-                                );
-                              }).toList(),
-                              decoration: const InputDecoration(
-                                labelText: 'Hatching 1 Department',
-                                border: OutlineInputBorder(),
-                              ),
-                            ),
-                            const SizedBox(height: 10),
-
-                            //Division 1 Dropdown
-                            DropdownButtonFormField<DivisionModel>(
-                              value: hatching1Divisions
-                                      .contains(_selectedHatching1Department)
-                                  ? _selectedHatching1Division
-                                  : null,
-                              onChanged: (DivisionModel? newValue) {
-                                setState(() {
-                                  _selectedHatching1Division = newValue;
-                                  _selectedHatching1Tank = null;
-                                  _getTanks(
-                                      divisionId: newValue?.id,
-                                      tankName: "tank1");
-                                });
-                              },
-                              items: hatching1Divisions
-                                  .map<DropdownMenuItem<DivisionModel>>(
-                                      (DivisionModel division) {
-                                return DropdownMenuItem<DivisionModel>(
-                                  value: division,
-                                  child: Text(division.division_name),
-                                );
-                              }).toList(),
-                              decoration: const InputDecoration(
-                                labelText: 'Hatching 1 Division',
-                                border: OutlineInputBorder(),
-                              ),
-                            ),
-                            const SizedBox(height: 10),
-
-                            //Tank 1 Dropdown
-                            DropdownButtonFormField<TankModel>(
-                              value: hatching1Tanks
-                                      .contains(_selectedHatching1Division)
-                                  ? _selectedHatching1Tank
-                                  : null,
-                              onChanged: (TankModel? newValue) {
-                                setState(() {
-                                  _selectedHatching1Tank = newValue;
-                                });
-                              },
-                              items: hatching1Tanks
-                                  .map<DropdownMenuItem<TankModel>>(
-                                      (TankModel tank) {
-                                return DropdownMenuItem<TankModel>(
-                                  value: tank,
-                                  child: Text(tank.tank_name ?? ''),
-                                );
-                              }).toList(),
-                              validator: (value) {
-                                if (value == null) {
-                                  return 'Please select a tank';
-                                }
-                                return null;
-                              },
-                              decoration: const InputDecoration(
-                                labelText: 'Hatching 1 Tank',
-                                border: OutlineInputBorder(),
-                              ),
-                            ),
-                            const SizedBox(height: 10),
-
-                            //Hatching 1 Batch
-                            TextFormField(
-                              controller: _hatching1BatchController,
-                              decoration: const InputDecoration(
-                                labelText: 'Hatching 1 Batch',
-                                border: OutlineInputBorder(),
-                              ),
-                              validator: (value) {
-                                if (value == null || value.isEmpty) {
-                                  return 'Please enter a batch';
-                                }
-                                return null;
-                              },
-                            )
-                          ],
-                        ),
-                      ),
-                      const SizedBox(height: 20),
-
-                      //Hatching 2 Details container
-                      Container(
-                        padding: const EdgeInsets.all(8.0),
-                        width: double.infinity,
-                        decoration: BoxDecoration(
-                          border: Border.all(
-                            color: Colors.blue,
+                            validator: (value) {
+                              if (value == null) {
+                                return 'Please select a department';
+                              }
+                              return null;
+                            },
                           ),
-                          borderRadius: BorderRadius.circular(5.0),
-                        ),
-                        child: Column(
-                          children: [
-                            const Text(
-                              'Hatching Tank 2 Details',
-                              style: TextStyle(fontWeight: FontWeight.bold),
+                          const SizedBox(height: 10),
+
+                          //Division 1 Dropdown
+                          DropdownButtonFormField<DivisionModel>(
+                            value: hatching1Divisions
+                                    .contains(_selectedHatching1Department)
+                                ? _selectedHatching1Division
+                                : null,
+                            onChanged: (DivisionModel? newValue) {
+                              setState(() {
+                                _selectedHatching1Division = newValue;
+                                _selectedHatching1Tank = null;
+                                _getTanks(
+                                    divisionId: newValue?.id,
+                                    tankName: "tank1");
+                              });
+                            },
+                            items: hatching1Divisions
+                                .map<DropdownMenuItem<DivisionModel>>(
+                                    (DivisionModel division) {
+                              return DropdownMenuItem<DivisionModel>(
+                                value: division,
+                                child: Text(division.division_name),
+                              );
+                            }).toList(),
+                            decoration: const InputDecoration(
+                              labelText: 'Hatching 1 Division',
+                              border: OutlineInputBorder(),
                             ),
-                            const SizedBox(height: 10),
+                            validator: (value) {
+                              if (value == null) {
+                                return 'Please select a division';
+                              }
+                              return null;
+                            },
+                          ),
+                          const SizedBox(height: 10),
 
-                            //Department 2 Dropdown
-                            DropdownButtonFormField<Department>(
-                              value: _selectedHatching2Department,
-                              onChanged: (Department? newValue) {
-                                setState(() {
-                                  _selectedHatching2Department = newValue;
-                                  _selectedHatching2Division = null;
-                                  _getDivisions(
-                                      departmentId: newValue?.id,
-                                      divName: "div2");
-                                });
-                              },
-                              items: hatching2Departments
-                                  .map<DropdownMenuItem<Department>>(
-                                      (Department department) {
-                                return DropdownMenuItem<Department>(
-                                  value: department,
-                                  child: Text(department.departmentName),
-                                );
-                              }).toList(),
-                              decoration: const InputDecoration(
-                                labelText: 'Hatching 2 Department',
-                                border: OutlineInputBorder(),
-                              ),
-                            ),
-                            const SizedBox(height: 10),
-
-                            //Division 2 Dropdown
-                            DropdownButtonFormField<DivisionModel>(
-                              value: hatching2Divisions
-                                      .contains(_selectedHatching2Division)
-                                  ? _selectedHatching2Division
-                                  : null,
-                              onChanged: (DivisionModel? newValue) {
-                                setState(() {
-                                  _selectedHatching2Division = newValue;
-                                  _selectedHatching2Tank = null;
-                                  _getTanks(
-                                      divisionId: newValue?.id,
-                                      tankName: "tank2");
-                                });
-                              },
-                              items: hatching2Divisions
-                                  .map<DropdownMenuItem<DivisionModel>>(
-                                      (DivisionModel division) {
-                                return DropdownMenuItem<DivisionModel>(
-                                  value: division,
-                                  child: Text(division.division_name),
-                                );
-                              }).toList(),
-                              decoration: const InputDecoration(
-                                labelText: 'Hatching 2 Division',
-                                border: OutlineInputBorder(),
-                              ),
-                            ),
-                            const SizedBox(height: 10),
-
-                            //Tank 2 Dropdown
-                            DropdownButtonFormField<TankModel>(
-                              value: hatching2Tanks
-                                      .contains(_selectedHatching2Tank)
-                                  ? _selectedHatching2Tank
-                                  : null,
-                              onChanged: (TankModel? newValue) {
-                                setState(() {
-                                  _selectedHatching2Tank = newValue;
-                                });
-                              },
-                              items: hatching2Tanks
-                                  .map<DropdownMenuItem<TankModel>>(
-                                      (TankModel tank) {
-                                return DropdownMenuItem<TankModel>(
-                                  value: tank,
-                                  child: Text(tank.tank_name ?? ''),
-                                );
-                              }).toList(),
-                              validator: (value) {
-                                if (value == null) {
-                                  return 'Please select a tank';
-                                }
-                                return null;
-                              },
-                              decoration: const InputDecoration(
-                                labelText: 'Hatching 2 Tank',
-                                border: OutlineInputBorder(),
-                              ),
-                            ),
-                            const SizedBox(height: 10),
-
-                            //Hatching 2 Batch
-                            TextFormField(
-                              controller: _hatching2BatchController,
-                              decoration: const InputDecoration(
-                                labelText: 'Hatching 2 Batch',
-                                border: OutlineInputBorder(),
-                              ),
-                              validator: (value) {
-                                if (value == null || value.isEmpty) {
-                                  return 'Please enter a batch';
-                                }
-                                return null;
-                              },
-                            )
-                          ],
-                        ),
-                      ),
-                      const SizedBox(height: 20),
-
-                      // Larvae Count and Count Multiplier
-                      Row(
-                        children: [
-                          // Larva Count
-                          Expanded(
-                            child: TextFormField(
-                              controller: _countController,
-                              keyboardType: TextInputType.number,
-                              decoration: const InputDecoration(
-                                  border: OutlineInputBorder(),
-                                  labelText: 'Larvae Count'),
-                              validator: (value) {
-                                if (value == null || value.isEmpty) {
-                                  return 'Please enter Larvae Count';
-                                }
-                                return null;
-                              },
+                          //Tank 1 Dropdown
+                          DropdownButtonFormField<TankModel>(
+                            value: hatching1Tanks
+                                    .contains(_selectedHatching1Division)
+                                ? _selectedHatching1Tank
+                                : null,
+                            onChanged: (TankModel? newValue) {
+                              setState(() {
+                                _selectedHatching1Tank = newValue;
+                              });
+                            },
+                            items: hatching1Tanks
+                                .map<DropdownMenuItem<TankModel>>(
+                                    (TankModel tank) {
+                              return DropdownMenuItem<TankModel>(
+                                value: tank,
+                                child: Text(tank.tank_name ?? ''),
+                              );
+                            }).toList(),
+                            validator: (value) {
+                              if (value == null) {
+                                return 'Please select a tank';
+                              }
+                              return null;
+                            },
+                            decoration: const InputDecoration(
+                              labelText: 'Hatching 1 Tank',
+                              border: OutlineInputBorder(),
                             ),
                           ),
-                          Text(' x ', style: TextStyle(fontSize: 20)),
-                          // Count Multiplier
-                          Expanded(
-                            child: TextFormField(
-                              controller: _countMuliplierController,
-                              keyboardType: TextInputType.number,
-                              decoration: const InputDecoration(
-                                  border: OutlineInputBorder(),
-                                  labelText: 'Count Multiplier'),
-                              validator: (value) {
-                                if (value == null || value.isEmpty) {
-                                  return 'Please enter Count Multiplier';
-                                }
-                                return null;
-                              },
+                          const SizedBox(height: 10),
+
+                          //Hatching 1 Batch
+                          TextFormField(
+                            controller: _hatching1BatchController,
+                            decoration: const InputDecoration(
+                              labelText: 'Hatching 1 Batch',
+                              border: OutlineInputBorder(),
                             ),
+                            validator: (value) {
+                              if (value == null || value.isEmpty) {
+                                return 'Please enter a batch';
+                              }
+                              return null;
+                            },
                           )
                         ],
                       ),
-                      //label
-                      const Row(
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+
+                  //Hatching 2 Details container
+                  Expanded(
+                    child: Container(
+                      padding: const EdgeInsets.all(8.0),
+                      width: double.infinity,
+                      decoration: BoxDecoration(
+                        border: Border.all(
+                          color: Colors.blue,
+                        ),
+                        borderRadius: BorderRadius.circular(5.0),
+                      ),
+                      child: Column(
                         children: [
-                          Expanded(
-                            child: Text('Count in Spoons'),
+                          const Text(
+                            'Hatching Tank 2 Details',
+                            style: TextStyle(fontWeight: FontWeight.bold),
                           ),
-                          SizedBox(width: 20),
-                          Expanded(
-                            child: Text('Count per Spoon'),
+                          const SizedBox(height: 10),
+
+                          //Department 2 Dropdown
+                          DropdownButtonFormField<Department>(
+                            value: _selectedHatching2Department,
+                            onChanged: (Department? newValue) {
+                              setState(() {
+                                _selectedHatching2Department = newValue;
+                                _selectedHatching2Division = null;
+                                _getDivisions(
+                                    departmentId: newValue?.id,
+                                    divName: "div2");
+                              });
+                            },
+                            items: hatching2Departments
+                                .map<DropdownMenuItem<Department>>(
+                                    (Department department) {
+                              return DropdownMenuItem<Department>(
+                                value: department,
+                                child: Text(department.departmentName),
+                              );
+                            }).toList(),
+                            validator: (value) {
+                              if (value == null) {
+                                return 'Please select a department';
+                              }
+                              return null;
+                            },
+                            decoration: const InputDecoration(
+                              labelText: 'Hatching 2 Department',
+                              border: OutlineInputBorder(),
+                            ),
                           ),
+                          const SizedBox(height: 10),
+
+                          //Division 2 Dropdown
+                          DropdownButtonFormField<DivisionModel>(
+                            value: hatching2Divisions
+                                    .contains(_selectedHatching2Division)
+                                ? _selectedHatching2Division
+                                : null,
+                            onChanged: (DivisionModel? newValue) {
+                              setState(() {
+                                _selectedHatching2Division = newValue;
+                                _selectedHatching2Tank = null;
+                                _getTanks(
+                                    divisionId: newValue?.id,
+                                    tankName: "tank2");
+                              });
+                            },
+                            items: hatching2Divisions
+                                .map<DropdownMenuItem<DivisionModel>>(
+                                    (DivisionModel division) {
+                              return DropdownMenuItem<DivisionModel>(
+                                value: division,
+                                child: Text(division.division_name),
+                              );
+                            }).toList(),
+                            validator: (value) {
+                              if (value == null) {
+                                return 'Please select a division';
+                              }
+                              return null;
+                            },
+                            decoration: const InputDecoration(
+                              labelText: 'Hatching 2 Division',
+                              border: OutlineInputBorder(),
+                            ),
+                          ),
+                          const SizedBox(height: 10),
+
+                          //Tank 2 Dropdown
+                          DropdownButtonFormField<TankModel>(
+                            value:
+                                hatching2Tanks.contains(_selectedHatching2Tank)
+                                    ? _selectedHatching2Tank
+                                    : null,
+                            onChanged: (TankModel? newValue) {
+                              setState(() {
+                                _selectedHatching2Tank = newValue;
+                              });
+                            },
+                            items: hatching2Tanks
+                                .map<DropdownMenuItem<TankModel>>(
+                                    (TankModel tank) {
+                              return DropdownMenuItem<TankModel>(
+                                value: tank,
+                                child: Text(tank.tank_name ?? ''),
+                              );
+                            }).toList(),
+                            validator: (value) {
+                              if (value == null) {
+                                return 'Please select a tank';
+                              }
+                              return null;
+                            },
+                            decoration: const InputDecoration(
+                              labelText: 'Hatching 2 Tank',
+                              border: OutlineInputBorder(),
+                            ),
+                          ),
+                          const SizedBox(height: 10),
+
+                          //Hatching 2 Batch
+                          TextFormField(
+                            controller: _hatching2BatchController,
+                            decoration: const InputDecoration(
+                              labelText: 'Hatching 2 Batch',
+                              border: OutlineInputBorder(),
+                            ),
+                            validator: (value) {
+                              if (value == null || value.isEmpty) {
+                                return 'Please enter a batch';
+                              }
+                              return null;
+                            },
+                          )
                         ],
                       ),
-                      SizedBox(height: 10),
-
-                      //total count
-                      TextFormField(
-                        controller: _totalCountController,
-                        readOnly: true,
-                        keyboardType: TextInputType.number,
-                        decoration: const InputDecoration(
-                            border: OutlineInputBorder(),
-                            labelText: 'Total Count'),
-                        validator: (value) {
-                          if (value == null || value.isEmpty) {
-                            return 'Please enter Total Count';
-                          }
-                          return null;
-                        },
-                      ),
-                      SizedBox(height: 20),
-
-                      //Target Details container
-                      Container(
-                        padding: const EdgeInsets.all(8.0),
-                        width: double.infinity,
-                        decoration: BoxDecoration(
-                          border: Border.all(
-                            color: Colors.blue,
-                          ),
-                          borderRadius: BorderRadius.circular(5.0),
-                        ),
-                        child: Column(
-                          children: [
-                            const Text(
-                              'Target Tank Details',
-                              style: TextStyle(fontWeight: FontWeight.bold),
-                            ),
-                            const SizedBox(height: 10),
-
-                            //Target Department Dropdown
-                            DropdownButtonFormField<Department>(
-                              value: _selectedTargetDepartment,
-                              onChanged: (Department? newValue) {
-                                setState(() {
-                                  _selectedTargetDepartment = newValue;
-                                  _selectedTargetDivision = null;
-                                  _getDivisions(
-                                      departmentId: newValue?.id,
-                                      divName: "target");
-                                });
-                              },
-                              items: targetDepartments
-                                  .map<DropdownMenuItem<Department>>(
-                                      (Department department) {
-                                return DropdownMenuItem<Department>(
-                                  value: department,
-                                  child: Text(department.departmentName),
-                                );
-                              }).toList(),
-                              decoration: const InputDecoration(
-                                labelText: 'Target Department',
-                                border: OutlineInputBorder(),
-                              ),
-                            ),
-                            const SizedBox(height: 10),
-
-                            //Target Division Dropdown
-                            DropdownButtonFormField<DivisionModel>(
-                              value: targetDivisions
-                                      .contains(_selectedTargetDivision)
-                                  ? _selectedTargetDivision
-                                  : null,
-                              onChanged: (DivisionModel? newValue) {
-                                setState(() {
-                                  _selectedTargetDivision = newValue;
-                                  _selectedTargetTank = null;
-                                  _getTanks(
-                                      divisionId: newValue?.id,
-                                      tankName: "target");
-                                });
-                              },
-                              items: targetDivisions
-                                  .map<DropdownMenuItem<DivisionModel>>(
-                                      (DivisionModel division) {
-                                return DropdownMenuItem<DivisionModel>(
-                                  value: division,
-                                  child: Text(division.division_name),
-                                );
-                              }).toList(),
-                              decoration: const InputDecoration(
-                                labelText: 'Target Division',
-                                border: OutlineInputBorder(),
-                              ),
-                            ),
-                            const SizedBox(height: 10),
-
-                            //Target Tank Dropdown
-                            DropdownButtonFormField<TankModel>(
-                              value: targetTanks.contains(_selectedTargetTank)
-                                  ? _selectedTargetTank
-                                  : null,
-                              onChanged: (TankModel? newValue) {
-                                setState(() {
-                                  _selectedTargetTank = newValue;
-                                });
-                              },
-                              items: targetTanks
-                                  .map<DropdownMenuItem<TankModel>>(
-                                      (TankModel tank) {
-                                return DropdownMenuItem<TankModel>(
-                                  value: tank,
-                                  child: Text(tank.tank_name ?? ''),
-                                );
-                              }).toList(),
-                              validator: (value) {
-                                if (value == null) {
-                                  return 'Please select a tank';
-                                }
-                                return null;
-                              },
-                              decoration: const InputDecoration(
-                                labelText: 'Target Tank',
-                                border: OutlineInputBorder(),
-                              ),
-                            ),
-                            const SizedBox(height: 10),
-
-                            //Target Batch
-                            TextFormField(
-                              controller: _targetBatchController,
-                              decoration: const InputDecoration(
-                                labelText: 'Target Batch',
-                                border: OutlineInputBorder(),
-                              ),
-                              validator: (value) {
-                                if (value == null || value.isEmpty) {
-                                  return 'Please enter a batch';
-                                }
-                                return null;
-                              },
-                            )
-                          ],
-                        ),
-                      ),
-                      const SizedBox(height: 10),
-
-                      //notes
-                      TextFormField(
-                        controller: _noteController,
-                        decoration: const InputDecoration(
-                          labelText: 'Notes',
-                          border: OutlineInputBorder(),
-                        ),
-                      ),
-                      const SizedBox(height: 10),
-
-                      //submit button
-                      ElevatedButton(
-                        style: ElevatedButton.styleFrom(
-                          minimumSize: const Size(double.infinity, 50),
-                          backgroundColor: Colors.blue,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(5.0),
-                          ),
-                        ),
-                        onPressed: () {
-                          if (_formKey.currentState!.validate()) {
-                            _submitForm();
-                          }
-                        },
-                        child: const Text('Submit',
-                            style: TextStyle(color: Colors.white)),
-                      ),
-                    ],
+                    ),
                   ),
+                  const SizedBox(width: 10),
+
+                  //Target Details container
+                  Expanded(
+                    child: Container(
+                      padding: const EdgeInsets.all(8.0),
+                      width: double.infinity,
+                      decoration: BoxDecoration(
+                        border: Border.all(
+                          color: Colors.blue,
+                        ),
+                        borderRadius: BorderRadius.circular(5.0),
+                      ),
+                      child: Column(
+                        children: [
+                          const Text(
+                            'Target Tank Details',
+                            style: TextStyle(fontWeight: FontWeight.bold),
+                          ),
+                          const SizedBox(height: 10),
+
+                          //Target Department Dropdown
+                          DropdownButtonFormField<Department>(
+                            value: _selectedTargetDepartment,
+                            onChanged: (Department? newValue) {
+                              setState(() {
+                                _selectedTargetDepartment = newValue;
+                                _selectedTargetDivision = null;
+                                _getDivisions(
+                                    departmentId: newValue?.id,
+                                    divName: "target");
+                              });
+                            },
+                            items: targetDepartments
+                                .map<DropdownMenuItem<Department>>(
+                                    (Department department) {
+                              return DropdownMenuItem<Department>(
+                                value: department,
+                                child: Text(department.departmentName),
+                              );
+                            }).toList(),
+                            validator: (value) {
+                              if (value == null) {
+                                return 'Please select a department';
+                              }
+                              return null;
+                            },
+                            decoration: const InputDecoration(
+                              labelText: 'Target Department',
+                              border: OutlineInputBorder(),
+                            ),
+                          ),
+                          const SizedBox(height: 10),
+
+                          //Target Division Dropdown
+                          DropdownButtonFormField<DivisionModel>(
+                            value: targetDivisions
+                                    .contains(_selectedTargetDivision)
+                                ? _selectedTargetDivision
+                                : null,
+                            onChanged: (DivisionModel? newValue) {
+                              setState(() {
+                                _selectedTargetDivision = newValue;
+                                _selectedTargetTank = null;
+                                _getTanks(
+                                    divisionId: newValue?.id,
+                                    tankName: "target");
+                              });
+                            },
+                            items: targetDivisions
+                                .map<DropdownMenuItem<DivisionModel>>(
+                                    (DivisionModel division) {
+                              return DropdownMenuItem<DivisionModel>(
+                                value: division,
+                                child: Text(division.division_name),
+                              );
+                            }).toList(),
+                            validator: (value) {
+                              if (value == null) {
+                                return 'Please select a division';
+                              }
+                              return null;
+                            },
+                            decoration: const InputDecoration(
+                              labelText: 'Target Division',
+                              border: OutlineInputBorder(),
+                            ),
+                          ),
+                          const SizedBox(height: 10),
+
+                          //Target Tank Dropdown
+                          DropdownButtonFormField<TankModel>(
+                            value: targetTanks.contains(_selectedTargetTank)
+                                ? _selectedTargetTank
+                                : null,
+                            onChanged: (TankModel? newValue) {
+                              setState(() {
+                                _selectedTargetTank = newValue;
+                              });
+                            },
+                            items: targetTanks.map<DropdownMenuItem<TankModel>>(
+                                (TankModel tank) {
+                              return DropdownMenuItem<TankModel>(
+                                value: tank,
+                                child: Text(tank.tank_name ?? ''),
+                              );
+                            }).toList(),
+                            validator: (value) {
+                              if (value == null) {
+                                return 'Please select a tank';
+                              }
+                              return null;
+                            },
+                            decoration: const InputDecoration(
+                              labelText: 'Target Tank',
+                              border: OutlineInputBorder(),
+                            ),
+                          ),
+                          const SizedBox(height: 10),
+
+                          //Target Batch
+                          TextFormField(
+                            controller: _targetBatchController,
+                            decoration: const InputDecoration(
+                              labelText: 'Target Batch',
+                              border: OutlineInputBorder(),
+                            ),
+                            validator: (value) {
+                              if (value == null || value.isEmpty) {
+                                return 'Please enter a batch';
+                              }
+                              return null;
+                            },
+                          )
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 20),
+
+              // Larvae Count, Count Multiplier and Total count Row
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  Expanded(
+                    child: // Larva Count
+                        TextFormField(
+                      controller: _countController,
+                      keyboardType: TextInputType.number,
+                      decoration: const InputDecoration(
+                          border: OutlineInputBorder(),
+                          labelText: 'Larvae Count'),
+                      validator: (value) {
+                        if (value == null || value.isEmpty) {
+                          return 'Please enter Larvae Count';
+                        }
+                        return null;
+                      },
+                    ),
+                  ),
+                  Text(' x ', style: TextStyle(fontSize: 20)),
+                  Expanded(
+                    child: TextFormField(
+                      controller: _countMuliplierController,
+                      keyboardType: TextInputType.number,
+                      decoration: const InputDecoration(
+                          border: OutlineInputBorder(),
+                          labelText: 'Count Multiplier'),
+                      validator: (value) {
+                        if (value == null || value.isEmpty) {
+                          return 'Please enter Count Multiplier';
+                        }
+                        return null;
+                      },
+                    ),
+                  ),
+                  Text(' = ', style: TextStyle(fontSize: 20)),
+                  Expanded(
+                    child: //total count
+                        TextFormField(
+                      controller: _totalCountController,
+                      readOnly: true,
+                      keyboardType: TextInputType.number,
+                      decoration: const InputDecoration(
+                          border: OutlineInputBorder(),
+                          labelText: 'Total Count'),
+                      validator: (value) {
+                        if (value == null || value.isEmpty) {
+                          return 'Please enter Total Count';
+                        }
+                        return null;
+                      },
+                    ),
+                  )
+                ],
+              ),
+              //label
+              Row(
+                children: [
+                  Expanded(
+                    child: Text('Count in Spoons'),
+                  ),
+                  SizedBox(width: 20),
+                  Expanded(
+                    child: Text('Count per Spoon'),
+                  ),
+                  SizedBox(width: 20),
+                  Expanded(
+                    child: Text('Total Count'),
+                  ),
+                ],
+              ),
+              SizedBox(height: 10),
+
+              //notes
+              TextFormField(
+                controller: _noteController,
+                decoration: const InputDecoration(
+                  labelText: 'Notes',
+                  border: OutlineInputBorder(),
                 ),
               ),
-            ),
+              const SizedBox(height: 10),
+
+              //submit button
+              Row(
+                mainAxisAlignment: MainAxisAlignment.end,
+                children: [
+                  ElevatedButton(
+                    style: ElevatedButton.styleFrom(
+                      minimumSize: const Size(200, 50),
+                      backgroundColor: Colors.blue,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(5.0),
+                      ),
+                    ),
+                    onPressed: () {
+                      if (_formKey.currentState!.validate()) {
+                        _submitForm();
+                      }
+                    },
+                    child: const Text(
+                      'Submit',
+                      style: TextStyle(color: Colors.white),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _tabletView() {
+    return SingleChildScrollView(
+      child: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Form(
+          key: _formKey,
+          child: Column(
+            children: [
+              //user id Row
+              Row(
+                mainAxisAlignment: MainAxisAlignment.start,
+                children: [
+                  Text('User Id: $_userId',
+                      style: TextStyle(fontWeight: FontWeight.bold))
+                ],
+              ),
+              const SizedBox(height: 10),
+
+              //Date
+              Row(
+                children: [
+                  Expanded(
+                    flex: 1,
+                    child: TextFormField(
+                      controller: _dateController,
+                      decoration: const InputDecoration(
+                          labelText: 'Date',
+                          border: OutlineInputBorder(),
+                          suffixIcon: Icon(Icons.calendar_month)),
+                      validator: (value) {
+                        if (value == null || value.isEmpty) {
+                          return 'Please enter date';
+                        }
+                        return null;
+                      },
+                      readOnly: true,
+                      onTap: () => _selectDate(context, _dateController),
+                    ),
+                  ),
+                  Expanded(
+                    flex: 1,
+                    child: const SizedBox(width: 10),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 20),
+
+              //Hatching 1 Details container
+              Container(
+                padding: const EdgeInsets.all(8.0),
+                width: double.infinity,
+                decoration: BoxDecoration(
+                  border: Border.all(
+                    color: Colors.blue,
+                  ),
+                  borderRadius: BorderRadius.circular(5.0),
+                ),
+                child: Column(
+                  children: [
+                    const Text(
+                      'Hatching Tank 1 Details',
+                      style: TextStyle(fontWeight: FontWeight.bold),
+                    ),
+                    const SizedBox(height: 10),
+
+                    //Department 1 and Division 1 Row
+                    Row(children: [
+                      //Department 1 Dropdown
+                      Expanded(
+                        child: DropdownButtonFormField<Department>(
+                          value: _selectedHatching1Department,
+                          onChanged: (Department? newValue) {
+                            setState(() {
+                              _selectedHatching1Department = newValue;
+                              _selectedHatching1Division = null;
+                              _selectedHatching1Tank = null;
+                            });
+                            _getDivisions(
+                                departmentId: newValue?.id, divName: "div1");
+                          },
+                          items: hatching1Departments
+                              .map<DropdownMenuItem<Department>>(
+                                  (Department department) {
+                            return DropdownMenuItem<Department>(
+                              value: department,
+                              child: Text(department.departmentName),
+                            );
+                          }).toList(),
+                          decoration: const InputDecoration(
+                            labelText: 'Hatching 1 Department',
+                            border: OutlineInputBorder(),
+                          ),
+                          validator: (value) {
+                            if (value == null) {
+                              return 'Please select a department';
+                            }
+                            return null;
+                          },
+                        ),
+                      ),
+                      const SizedBox(width: 10),
+
+                      //Division 1 Dropdown
+                      Expanded(
+                        child: DropdownButtonFormField<DivisionModel>(
+                          value: hatching1Divisions
+                                  .contains(_selectedHatching1Department)
+                              ? _selectedHatching1Division
+                              : null,
+                          onChanged: (DivisionModel? newValue) {
+                            setState(() {
+                              _selectedHatching1Division = newValue;
+                              _selectedHatching1Tank = null;
+                              _getTanks(
+                                  divisionId: newValue?.id, tankName: "tank1");
+                            });
+                          },
+                          items: hatching1Divisions
+                              .map<DropdownMenuItem<DivisionModel>>(
+                                  (DivisionModel division) {
+                            return DropdownMenuItem<DivisionModel>(
+                              value: division,
+                              child: Text(division.division_name),
+                            );
+                          }).toList(),
+                          decoration: const InputDecoration(
+                            labelText: 'Hatching 1 Division',
+                            border: OutlineInputBorder(),
+                          ),
+                          validator: (value) {
+                            if (value == null) {
+                              return 'Please select a division';
+                            }
+                            return null;
+                          },
+                        ),
+                      ),
+                    ]),
+                    const SizedBox(height: 10),
+
+                    //Tank 1 and Batch 1 Row
+                    Row(children: [
+                      //Tank 1 Dropdown
+                      Expanded(
+                        child: DropdownButtonFormField<TankModel>(
+                          value: hatching1Tanks
+                                  .contains(_selectedHatching1Division)
+                              ? _selectedHatching1Tank
+                              : null,
+                          onChanged: (TankModel? newValue) {
+                            setState(() {
+                              _selectedHatching1Tank = newValue;
+                            });
+                          },
+                          items: hatching1Tanks
+                              .map<DropdownMenuItem<TankModel>>(
+                                  (TankModel tank) {
+                            return DropdownMenuItem<TankModel>(
+                              value: tank,
+                              child: Text(tank.tank_name ?? ''),
+                            );
+                          }).toList(),
+                          validator: (value) {
+                            if (value == null) {
+                              return 'Please select a tank';
+                            }
+                            return null;
+                          },
+                          decoration: const InputDecoration(
+                            labelText: 'Hatching 1 Tank',
+                            border: OutlineInputBorder(),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 10),
+
+                      //Hatching 1 Batch
+                      Expanded(
+                        child: TextFormField(
+                          controller: _hatching1BatchController,
+                          decoration: const InputDecoration(
+                            labelText: 'Hatching 1 Batch',
+                            border: OutlineInputBorder(),
+                          ),
+                          validator: (value) {
+                            if (value == null || value.isEmpty) {
+                              return 'Please enter a batch';
+                            }
+                            return null;
+                          },
+                        ),
+                      )
+                    ])
+                  ],
+                ),
+              ),
+              const SizedBox(height: 20),
+
+              //Hatching 2 Details container
+              Container(
+                padding: const EdgeInsets.all(8.0),
+                width: double.infinity,
+                decoration: BoxDecoration(
+                  border: Border.all(
+                    color: Colors.blue,
+                  ),
+                  borderRadius: BorderRadius.circular(5.0),
+                ),
+                child: Column(
+                  children: [
+                    const Text(
+                      'Hatching Tank 2 Details',
+                      style: TextStyle(fontWeight: FontWeight.bold),
+                    ),
+                    const SizedBox(height: 10),
+
+                    //Department 2 and Division 2 Row
+                    Row(children: [
+                      //Department 2 Dropdown
+                      Expanded(
+                        child: DropdownButtonFormField<Department>(
+                          value: _selectedHatching2Department,
+                          onChanged: (Department? newValue) {
+                            setState(() {
+                              _selectedHatching2Department = newValue;
+                              _selectedHatching2Division = null;
+                              _getDivisions(
+                                  departmentId: newValue?.id, divName: "div2");
+                            });
+                          },
+                          items: hatching2Departments
+                              .map<DropdownMenuItem<Department>>(
+                                  (Department department) {
+                            return DropdownMenuItem<Department>(
+                              value: department,
+                              child: Text(department.departmentName),
+                            );
+                          }).toList(),
+                          validator: (value) {
+                            if (value == null) {
+                              return 'Please select a department';
+                            }
+                            return null;
+                          },
+                          decoration: const InputDecoration(
+                            labelText: 'Hatching 2 Department',
+                            border: OutlineInputBorder(),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 10),
+
+                      //Division 2 Dropdown
+                      Expanded(
+                        child: DropdownButtonFormField<DivisionModel>(
+                          value: hatching2Divisions
+                                  .contains(_selectedHatching2Division)
+                              ? _selectedHatching2Division
+                              : null,
+                          onChanged: (DivisionModel? newValue) {
+                            setState(() {
+                              _selectedHatching2Division = newValue;
+                              _selectedHatching2Tank = null;
+                              _getTanks(
+                                  divisionId: newValue?.id, tankName: "tank2");
+                            });
+                          },
+                          items: hatching2Divisions
+                              .map<DropdownMenuItem<DivisionModel>>(
+                                  (DivisionModel division) {
+                            return DropdownMenuItem<DivisionModel>(
+                              value: division,
+                              child: Text(division.division_name),
+                            );
+                          }).toList(),
+                          validator: (value) {
+                            if (value == null) {
+                              return 'Please select a division';
+                            }
+                            return null;
+                          },
+                          decoration: const InputDecoration(
+                            labelText: 'Hatching 2 Division',
+                            border: OutlineInputBorder(),
+                          ),
+                        ),
+                      ),
+                    ]),
+                    const SizedBox(height: 10),
+
+                    //Tank 2 and Batch 2 Row
+                    Row(
+                      children: [
+                        //Tank 2 Dropdown
+                        Expanded(
+                          child: DropdownButtonFormField<TankModel>(
+                            value:
+                                hatching2Tanks.contains(_selectedHatching2Tank)
+                                    ? _selectedHatching2Tank
+                                    : null,
+                            onChanged: (TankModel? newValue) {
+                              setState(() {
+                                _selectedHatching2Tank = newValue;
+                              });
+                            },
+                            items: hatching2Tanks
+                                .map<DropdownMenuItem<TankModel>>(
+                                    (TankModel tank) {
+                              return DropdownMenuItem<TankModel>(
+                                value: tank,
+                                child: Text(tank.tank_name ?? ''),
+                              );
+                            }).toList(),
+                            validator: (value) {
+                              if (value == null) {
+                                return 'Please select a tank';
+                              }
+                              return null;
+                            },
+                            decoration: const InputDecoration(
+                              labelText: 'Hatching 2 Tank',
+                              border: OutlineInputBorder(),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 10),
+
+                        //Hatching 2 Batch
+                        Expanded(
+                          child: TextFormField(
+                            controller: _hatching2BatchController,
+                            decoration: const InputDecoration(
+                              labelText: 'Hatching 2 Batch',
+                              border: OutlineInputBorder(),
+                            ),
+                            validator: (value) {
+                              if (value == null || value.isEmpty) {
+                                return 'Please enter a batch';
+                              }
+                              return null;
+                            },
+                          ),
+                        )
+                      ],
+                    )
+                  ],
+                ),
+              ),
+              const SizedBox(height: 20),
+
+              // Larvae Count, Count Multiplier and Total count Row
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  Expanded(
+                    child: // Larva Count
+                        TextFormField(
+                      controller: _countController,
+                      keyboardType: TextInputType.number,
+                      decoration: const InputDecoration(
+                          border: OutlineInputBorder(),
+                          labelText: 'Larvae Count'),
+                      validator: (value) {
+                        if (value == null || value.isEmpty) {
+                          return 'Please enter Larvae Count';
+                        }
+                        return null;
+                      },
+                    ),
+                  ),
+                  Text(' x ', style: TextStyle(fontSize: 20)),
+                  Expanded(
+                    child: TextFormField(
+                      controller: _countMuliplierController,
+                      keyboardType: TextInputType.number,
+                      decoration: const InputDecoration(
+                          border: OutlineInputBorder(),
+                          labelText: 'Count Multiplier'),
+                      validator: (value) {
+                        if (value == null || value.isEmpty) {
+                          return 'Please enter Count Multiplier';
+                        }
+                        return null;
+                      },
+                    ),
+                  ),
+                  Text(' = ', style: TextStyle(fontSize: 20)),
+                  Expanded(
+                    child: //total count
+                        TextFormField(
+                      controller: _totalCountController,
+                      readOnly: true,
+                      keyboardType: TextInputType.number,
+                      decoration: const InputDecoration(
+                          border: OutlineInputBorder(),
+                          labelText: 'Total Count'),
+                      validator: (value) {
+                        if (value == null || value.isEmpty) {
+                          return 'Please enter Total Count';
+                        }
+                        return null;
+                      },
+                    ),
+                  )
+                ],
+              ),
+              //label
+              const Row(
+                children: [
+                  Expanded(
+                    child: Text('Count in Spoons'),
+                  ),
+                  SizedBox(width: 20),
+                  Expanded(
+                    child: Text('Count per Spoon'),
+                  ),
+                  SizedBox(width: 20),
+                  Expanded(
+                    child: Text('Total Count'),
+                  ),
+                ],
+              ),
+              SizedBox(height: 20),
+
+              //Target Details container
+              Container(
+                padding: const EdgeInsets.all(8.0),
+                width: double.infinity,
+                decoration: BoxDecoration(
+                  border: Border.all(
+                    color: Colors.blue,
+                  ),
+                  borderRadius: BorderRadius.circular(5.0),
+                ),
+                child: Column(
+                  children: [
+                    const Text(
+                      'Target Tank Details',
+                      style: TextStyle(fontWeight: FontWeight.bold),
+                    ),
+                    const SizedBox(height: 10),
+
+                    //Target Department and Target Division Row
+                    Row(
+                      children: [
+                        //Target Department Dropdown
+                        Expanded(
+                          child: DropdownButtonFormField<Department>(
+                            value: _selectedTargetDepartment,
+                            onChanged: (Department? newValue) {
+                              setState(() {
+                                _selectedTargetDepartment = newValue;
+                                _selectedTargetDivision = null;
+                                _getDivisions(
+                                    departmentId: newValue?.id,
+                                    divName: "target");
+                              });
+                            },
+                            items: targetDepartments
+                                .map<DropdownMenuItem<Department>>(
+                                    (Department department) {
+                              return DropdownMenuItem<Department>(
+                                value: department,
+                                child: Text(department.departmentName),
+                              );
+                            }).toList(),
+                            validator: (value) {
+                              if (value == null) {
+                                return 'Please select a department';
+                              }
+                              return null;
+                            },
+                            decoration: const InputDecoration(
+                              labelText: 'Target Department',
+                              border: OutlineInputBorder(),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 10),
+
+                        //Target Division Dropdown
+                        Expanded(
+                          child: DropdownButtonFormField<DivisionModel>(
+                            value: targetDivisions
+                                    .contains(_selectedTargetDivision)
+                                ? _selectedTargetDivision
+                                : null,
+                            onChanged: (DivisionModel? newValue) {
+                              setState(() {
+                                _selectedTargetDivision = newValue;
+                                _selectedTargetTank = null;
+                                _getTanks(
+                                    divisionId: newValue?.id,
+                                    tankName: "target");
+                              });
+                            },
+                            items: targetDivisions
+                                .map<DropdownMenuItem<DivisionModel>>(
+                                    (DivisionModel division) {
+                              return DropdownMenuItem<DivisionModel>(
+                                value: division,
+                                child: Text(division.division_name),
+                              );
+                            }).toList(),
+                            validator: (value) {
+                              if (value == null) {
+                                return 'Please select a division';
+                              }
+                              return null;
+                            },
+                            decoration: const InputDecoration(
+                              labelText: 'Target Division',
+                              border: OutlineInputBorder(),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 10),
+
+                    //Target Tank and Batch Row
+                    Row(
+                      children: [
+                        //Target Tank Dropdown
+                        Expanded(
+                          child: DropdownButtonFormField<TankModel>(
+                            value: targetTanks.contains(_selectedTargetTank)
+                                ? _selectedTargetTank
+                                : null,
+                            onChanged: (TankModel? newValue) {
+                              setState(() {
+                                _selectedTargetTank = newValue;
+                              });
+                            },
+                            items: targetTanks.map<DropdownMenuItem<TankModel>>(
+                                (TankModel tank) {
+                              return DropdownMenuItem<TankModel>(
+                                value: tank,
+                                child: Text(tank.tank_name ?? ''),
+                              );
+                            }).toList(),
+                            validator: (value) {
+                              if (value == null) {
+                                return 'Please select a tank';
+                              }
+                              return null;
+                            },
+                            decoration: const InputDecoration(
+                              labelText: 'Target Tank',
+                              border: OutlineInputBorder(),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 10),
+
+                        //Target Batch
+                        Expanded(
+                          child: TextFormField(
+                            controller: _targetBatchController,
+                            decoration: const InputDecoration(
+                              labelText: 'Target Batch',
+                              border: OutlineInputBorder(),
+                            ),
+                            validator: (value) {
+                              if (value == null || value.isEmpty) {
+                                return 'Please enter a batch';
+                              }
+                              return null;
+                            },
+                          ),
+                        )
+                      ],
+                    )
+                  ],
+                ),
+              ),
+              const SizedBox(height: 10),
+
+              //notes
+              TextFormField(
+                controller: _noteController,
+                decoration: const InputDecoration(
+                  labelText: 'Notes',
+                  border: OutlineInputBorder(),
+                ),
+              ),
+              const SizedBox(height: 10),
+
+              //submit button
+              Row(
+                mainAxisAlignment: MainAxisAlignment.end,
+                children: [
+                  ElevatedButton(
+                    style: ElevatedButton.styleFrom(
+                      minimumSize: const Size(200, 50),
+                      backgroundColor: Colors.blue,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(5.0),
+                      ),
+                    ),
+                    onPressed: () {
+                      if (_formKey.currentState!.validate()) {
+                        _submitForm();
+                      }
+                    },
+                    child: const Text(
+                      'Submit',
+                      style: TextStyle(color: Colors.white),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _mobileView() {
+    return SingleChildScrollView(
+      child: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Form(
+          key: _formKey,
+          child: Column(
+            children: [
+              //user id Row
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Text('User Id: $_userId',
+                      style: TextStyle(fontWeight: FontWeight.bold))
+                ],
+              ),
+              const SizedBox(height: 10),
+
+              //Date
+              TextFormField(
+                controller: _dateController,
+                decoration: const InputDecoration(
+                    labelText: 'Date',
+                    border: OutlineInputBorder(),
+                    suffixIcon: Icon(Icons.calendar_month)),
+                validator: (value) {
+                  if (value == null || value.isEmpty) {
+                    return 'Please enter date';
+                  }
+                  return null;
+                },
+                readOnly: true,
+                onTap: () => _selectDate(context, _dateController),
+              ),
+              const SizedBox(height: 20),
+
+              //Hatching 1 Details container
+              Container(
+                padding: const EdgeInsets.all(8.0),
+                width: double.infinity,
+                decoration: BoxDecoration(
+                  border: Border.all(
+                    color: Colors.blue,
+                  ),
+                  borderRadius: BorderRadius.circular(5.0),
+                ),
+                child: Column(
+                  children: [
+                    const Text(
+                      'Hatching Tank 1 Details',
+                      style: TextStyle(fontWeight: FontWeight.bold),
+                    ),
+                    const SizedBox(height: 10),
+
+                    //Department 1 Dropdown
+                    DropdownButtonFormField<Department>(
+                      value: _selectedHatching1Department,
+                      onChanged: (Department? newValue) {
+                        setState(() {
+                          _selectedHatching1Department = newValue;
+                          _selectedHatching1Division = null;
+                          _selectedHatching1Tank = null;
+                        });
+                        _getDivisions(
+                            departmentId: newValue?.id, divName: "div1");
+                      },
+                      items: hatching1Departments
+                          .map<DropdownMenuItem<Department>>(
+                              (Department department) {
+                        return DropdownMenuItem<Department>(
+                          value: department,
+                          child: Text(department.departmentName),
+                        );
+                      }).toList(),
+                      decoration: const InputDecoration(
+                        labelText: 'Hatching 1 Department',
+                        border: OutlineInputBorder(),
+                      ),
+                      validator: (value) {
+                        if (value == null) {
+                          return 'Please select a department';
+                        }
+                        return null;
+                      },
+                    ),
+                    const SizedBox(height: 10),
+
+                    //Division 1 Dropdown
+                    DropdownButtonFormField<DivisionModel>(
+                      value: hatching1Divisions
+                              .contains(_selectedHatching1Department)
+                          ? _selectedHatching1Division
+                          : null,
+                      onChanged: (DivisionModel? newValue) {
+                        setState(() {
+                          _selectedHatching1Division = newValue;
+                          _selectedHatching1Tank = null;
+                          _getTanks(
+                              divisionId: newValue?.id, tankName: "tank1");
+                        });
+                      },
+                      items: hatching1Divisions
+                          .map<DropdownMenuItem<DivisionModel>>(
+                              (DivisionModel division) {
+                        return DropdownMenuItem<DivisionModel>(
+                          value: division,
+                          child: Text(division.division_name),
+                        );
+                      }).toList(),
+                      decoration: const InputDecoration(
+                        labelText: 'Hatching 1 Division',
+                        border: OutlineInputBorder(),
+                      ),
+                      validator: (value) {
+                        if (value == null) {
+                          return 'Please select a division';
+                        }
+                        return null;
+                      },
+                    ),
+                    const SizedBox(height: 10),
+
+                    //Tank 1 Dropdown
+                    DropdownButtonFormField<TankModel>(
+                      value: hatching1Tanks.contains(_selectedHatching1Division)
+                          ? _selectedHatching1Tank
+                          : null,
+                      onChanged: (TankModel? newValue) {
+                        setState(() {
+                          _selectedHatching1Tank = newValue;
+                        });
+                      },
+                      items: hatching1Tanks
+                          .map<DropdownMenuItem<TankModel>>((TankModel tank) {
+                        return DropdownMenuItem<TankModel>(
+                          value: tank,
+                          child: Text(tank.tank_name ?? ''),
+                        );
+                      }).toList(),
+                      validator: (value) {
+                        if (value == null) {
+                          return 'Please select a tank';
+                        }
+                        return null;
+                      },
+                      decoration: const InputDecoration(
+                        labelText: 'Hatching 1 Tank',
+                        border: OutlineInputBorder(),
+                      ),
+                    ),
+                    const SizedBox(height: 10),
+
+                    //Hatching 1 Batch
+                    TextFormField(
+                      controller: _hatching1BatchController,
+                      decoration: const InputDecoration(
+                        labelText: 'Hatching 1 Batch',
+                        border: OutlineInputBorder(),
+                      ),
+                      validator: (value) {
+                        if (value == null || value.isEmpty) {
+                          return 'Please enter a batch';
+                        }
+                        return null;
+                      },
+                    )
+                  ],
+                ),
+              ),
+              const SizedBox(height: 20),
+
+              //Hatching 2 Details container
+              Container(
+                padding: const EdgeInsets.all(8.0),
+                width: double.infinity,
+                decoration: BoxDecoration(
+                  border: Border.all(
+                    color: Colors.blue,
+                  ),
+                  borderRadius: BorderRadius.circular(5.0),
+                ),
+                child: Column(
+                  children: [
+                    const Text(
+                      'Hatching Tank 2 Details',
+                      style: TextStyle(fontWeight: FontWeight.bold),
+                    ),
+                    const SizedBox(height: 10),
+
+                    //Department 2 Dropdown
+                    DropdownButtonFormField<Department>(
+                      value: _selectedHatching2Department,
+                      onChanged: (Department? newValue) {
+                        setState(() {
+                          _selectedHatching2Department = newValue;
+                          _selectedHatching2Division = null;
+                          _getDivisions(
+                              departmentId: newValue?.id, divName: "div2");
+                        });
+                      },
+                      items: hatching2Departments
+                          .map<DropdownMenuItem<Department>>(
+                              (Department department) {
+                        return DropdownMenuItem<Department>(
+                          value: department,
+                          child: Text(department.departmentName),
+                        );
+                      }).toList(),
+                      validator: (value) {
+                        if (value == null) {
+                          return 'Please select a department';
+                        }
+                        return null;
+                      },
+                      decoration: const InputDecoration(
+                        labelText: 'Hatching 2 Department',
+                        border: OutlineInputBorder(),
+                      ),
+                    ),
+                    const SizedBox(height: 10),
+
+                    //Division 2 Dropdown
+                    DropdownButtonFormField<DivisionModel>(
+                      value: hatching2Divisions
+                              .contains(_selectedHatching2Division)
+                          ? _selectedHatching2Division
+                          : null,
+                      onChanged: (DivisionModel? newValue) {
+                        setState(() {
+                          _selectedHatching2Division = newValue;
+                          _selectedHatching2Tank = null;
+                          _getTanks(
+                              divisionId: newValue?.id, tankName: "tank2");
+                        });
+                      },
+                      items: hatching2Divisions
+                          .map<DropdownMenuItem<DivisionModel>>(
+                              (DivisionModel division) {
+                        return DropdownMenuItem<DivisionModel>(
+                          value: division,
+                          child: Text(division.division_name),
+                        );
+                      }).toList(),
+                      validator: (value) {
+                        if (value == null) {
+                          return 'Please select a division';
+                        }
+                        return null;
+                      },
+                      decoration: const InputDecoration(
+                        labelText: 'Hatching 2 Division',
+                        border: OutlineInputBorder(),
+                      ),
+                    ),
+                    const SizedBox(height: 10),
+
+                    //Tank 2 Dropdown
+                    DropdownButtonFormField<TankModel>(
+                      value: hatching2Tanks.contains(_selectedHatching2Tank)
+                          ? _selectedHatching2Tank
+                          : null,
+                      onChanged: (TankModel? newValue) {
+                        setState(() {
+                          _selectedHatching2Tank = newValue;
+                        });
+                      },
+                      items: hatching2Tanks
+                          .map<DropdownMenuItem<TankModel>>((TankModel tank) {
+                        return DropdownMenuItem<TankModel>(
+                          value: tank,
+                          child: Text(tank.tank_name ?? ''),
+                        );
+                      }).toList(),
+                      validator: (value) {
+                        if (value == null) {
+                          return 'Please select a tank';
+                        }
+                        return null;
+                      },
+                      decoration: const InputDecoration(
+                        labelText: 'Hatching 2 Tank',
+                        border: OutlineInputBorder(),
+                      ),
+                    ),
+                    const SizedBox(height: 10),
+
+                    //Hatching 2 Batch
+                    TextFormField(
+                      controller: _hatching2BatchController,
+                      decoration: const InputDecoration(
+                        labelText: 'Hatching 2 Batch',
+                        border: OutlineInputBorder(),
+                      ),
+                      validator: (value) {
+                        if (value == null || value.isEmpty) {
+                          return 'Please enter a batch';
+                        }
+                        return null;
+                      },
+                    )
+                  ],
+                ),
+              ),
+              const SizedBox(height: 20),
+
+              // Larvae Count and Count Multiplier
+              Row(
+                children: [
+                  // Larva Count
+                  Expanded(
+                    child: TextFormField(
+                      controller: _countController,
+                      keyboardType: TextInputType.number,
+                      decoration: const InputDecoration(
+                          border: OutlineInputBorder(),
+                          labelText: 'Larvae Count'),
+                      validator: (value) {
+                        if (value == null || value.isEmpty) {
+                          return 'Please enter Larvae Count';
+                        }
+                        return null;
+                      },
+                    ),
+                  ),
+                  Text(' x ', style: TextStyle(fontSize: 20)),
+                  // Count Multiplier
+                  Expanded(
+                    child: TextFormField(
+                      controller: _countMuliplierController,
+                      keyboardType: TextInputType.number,
+                      decoration: const InputDecoration(
+                          border: OutlineInputBorder(),
+                          labelText: 'Count Multiplier'),
+                      validator: (value) {
+                        if (value == null || value.isEmpty) {
+                          return 'Please enter Count Multiplier';
+                        }
+                        return null;
+                      },
+                    ),
+                  )
+                ],
+              ),
+              //label
+              const Row(
+                children: [
+                  Expanded(
+                    child: Text('Count in Spoons'),
+                  ),
+                  SizedBox(width: 20),
+                  Expanded(
+                    child: Text('Count per Spoon'),
+                  ),
+                ],
+              ),
+              SizedBox(height: 10),
+
+              //total count
+              TextFormField(
+                controller: _totalCountController,
+                readOnly: true,
+                keyboardType: TextInputType.number,
+                decoration: const InputDecoration(
+                    border: OutlineInputBorder(), labelText: 'Total Count'),
+                validator: (value) {
+                  if (value == null || value.isEmpty) {
+                    return 'Please enter Total Count';
+                  }
+                  return null;
+                },
+              ),
+              SizedBox(height: 20),
+
+              //Target Details container
+              Container(
+                padding: const EdgeInsets.all(8.0),
+                width: double.infinity,
+                decoration: BoxDecoration(
+                  border: Border.all(
+                    color: Colors.blue,
+                  ),
+                  borderRadius: BorderRadius.circular(5.0),
+                ),
+                child: Column(
+                  children: [
+                    const Text(
+                      'Target Tank Details',
+                      style: TextStyle(fontWeight: FontWeight.bold),
+                    ),
+                    const SizedBox(height: 10),
+
+                    //Target Department Dropdown
+                    DropdownButtonFormField<Department>(
+                      value: _selectedTargetDepartment,
+                      onChanged: (Department? newValue) {
+                        setState(() {
+                          _selectedTargetDepartment = newValue;
+                          _selectedTargetDivision = null;
+                          _getDivisions(
+                              departmentId: newValue?.id, divName: "target");
+                        });
+                      },
+                      items: targetDepartments
+                          .map<DropdownMenuItem<Department>>(
+                              (Department department) {
+                        return DropdownMenuItem<Department>(
+                          value: department,
+                          child: Text(department.departmentName),
+                        );
+                      }).toList(),
+                      validator: (value) {
+                        if (value == null) {
+                          return 'Please select a department';
+                        }
+                        return null;
+                      },
+                      decoration: const InputDecoration(
+                        labelText: 'Target Department',
+                        border: OutlineInputBorder(),
+                      ),
+                    ),
+                    const SizedBox(height: 10),
+
+                    //Target Division Dropdown
+                    DropdownButtonFormField<DivisionModel>(
+                      value: targetDivisions.contains(_selectedTargetDivision)
+                          ? _selectedTargetDivision
+                          : null,
+                      onChanged: (DivisionModel? newValue) {
+                        setState(() {
+                          _selectedTargetDivision = newValue;
+                          _selectedTargetTank = null;
+                          _getTanks(
+                              divisionId: newValue?.id, tankName: "target");
+                        });
+                      },
+                      items: targetDivisions
+                          .map<DropdownMenuItem<DivisionModel>>(
+                              (DivisionModel division) {
+                        return DropdownMenuItem<DivisionModel>(
+                          value: division,
+                          child: Text(division.division_name),
+                        );
+                      }).toList(),
+                      validator: (value) {
+                        if (value == null) {
+                          return 'Please select a division';
+                        }
+                        return null;
+                      },
+                      decoration: const InputDecoration(
+                        labelText: 'Target Division',
+                        border: OutlineInputBorder(),
+                      ),
+                    ),
+                    const SizedBox(height: 10),
+
+                    //Target Tank Dropdown
+                    DropdownButtonFormField<TankModel>(
+                      value: targetTanks.contains(_selectedTargetTank)
+                          ? _selectedTargetTank
+                          : null,
+                      onChanged: (TankModel? newValue) {
+                        setState(() {
+                          _selectedTargetTank = newValue;
+                        });
+                      },
+                      items: targetTanks
+                          .map<DropdownMenuItem<TankModel>>((TankModel tank) {
+                        return DropdownMenuItem<TankModel>(
+                          value: tank,
+                          child: Text(tank.tank_name ?? ''),
+                        );
+                      }).toList(),
+                      validator: (value) {
+                        if (value == null) {
+                          return 'Please select a tank';
+                        }
+                        return null;
+                      },
+                      decoration: const InputDecoration(
+                        labelText: 'Target Tank',
+                        border: OutlineInputBorder(),
+                      ),
+                    ),
+                    const SizedBox(height: 10),
+
+                    //Target Batch
+                    TextFormField(
+                      controller: _targetBatchController,
+                      decoration: const InputDecoration(
+                        labelText: 'Target Batch',
+                        border: OutlineInputBorder(),
+                      ),
+                      validator: (value) {
+                        if (value == null || value.isEmpty) {
+                          return 'Please enter a batch';
+                        }
+                        return null;
+                      },
+                    )
+                  ],
+                ),
+              ),
+              const SizedBox(height: 10),
+
+              //notes
+              TextFormField(
+                controller: _noteController,
+                decoration: const InputDecoration(
+                  labelText: 'Notes',
+                  border: OutlineInputBorder(),
+                ),
+              ),
+              const SizedBox(height: 10),
+
+              //submit button
+              ElevatedButton(
+                style: ElevatedButton.styleFrom(
+                  minimumSize: const Size(double.infinity, 50),
+                  backgroundColor: Colors.blue,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(5.0),
+                  ),
+                ),
+                onPressed: () {
+                  if (_formKey.currentState!.validate()) {
+                    _submitForm();
+                  }
+                },
+                child: const Text(
+                  'Submit',
+                  style: TextStyle(color: Colors.white),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 }

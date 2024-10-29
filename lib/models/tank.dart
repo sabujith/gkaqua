@@ -4,6 +4,7 @@ class TankModel {
   String? tank_name;
   int dept_id;
   int division_id;
+  String? status;
   String? notes;
   String? start_date;
   String? end_date;
