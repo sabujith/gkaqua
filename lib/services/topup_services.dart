@@ -5,13 +5,14 @@ class TopupService {
   final String baseUrl = 'http://127.0.0.1:8000/api/topups';
 
   //get all topups
-  Future<List<dynamic>> getAllTopups() async {
+  Future<List<Map<String, dynamic>>> getAllTopups() async {
     var url = Uri.parse(baseUrl);
     try {
       var response = await http.get(url);
       if (response.statusCode == 200) {
         var jsonData = jsonDecode(response.body);
-        return jsonData;
+        //return only the data List
+        return List<Map<String, dynamic>>.from(jsonData["data"]);
       } else {
         throw Exception('Failed to load topups');
       }

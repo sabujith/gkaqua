@@ -22,12 +22,13 @@ class unitMasterScreen extends StatefulWidget {
 
 class _unitMasterScreenState extends State<unitMasterScreen> {
   final _formKey = GlobalKey<FormState>();
+  String? _userId;
   final _unitController = TextEditingController();
   final _unitCodeController = TextEditingController();
   final _startDateController = TextEditingController();
   final _noteController = TextEditingController();
   final _endDateController = TextEditingController();
-  final _isadmin = true;
+  final _isadmin = false;
   bool _isEditing = false;
 
   UnitModel? selectedUnit;
@@ -39,7 +40,15 @@ class _unitMasterScreenState extends State<unitMasterScreen> {
   void initState() {
     // TODO: implement initState
     super.initState();
+    _getUserDetails();
     _fetchUnits();
+  }
+
+  void _getUserDetails() async {
+    // final userId = await getUserId();
+    setState(() {
+      _userId = "User 123";
+    });
   }
 
   Future<void> _fetchUnits() async {
@@ -53,6 +62,11 @@ class _unitMasterScreenState extends State<unitMasterScreen> {
         unitList = fetchedUnits;
       });
     } catch (e) {
+      // ScaffoldMessenger.of(context).showSnackBar(
+      //   SnackBar(
+      //     content: Text(e.toString()),
+      //   ),
+      // );
       showDialog(
           context: context,
           builder: (BuildContext context) {
@@ -80,75 +94,45 @@ class _unitMasterScreenState extends State<unitMasterScreen> {
   Future<void> _submitForm() async {
     UnitService unitService = UnitService();
 
-    if (_formKey.currentState!.validate()) {
-      String unitName = _unitController.text;
-      String unitCode = _unitCodeController.text;
-      String note = _noteController.text;
-      String startdate = _startDateController.text;
-      String enddate = _endDateController.text;
+    String unitName = _unitController.text;
+    String unitCode = _unitCodeController.text;
+    String note = _noteController.text;
+    String startdate = _startDateController.text;
+    String enddate = _endDateController.text;
 
-      // setState(() {
-      //   unitLis({
-      //     'unit_code': unitCode,
-      //     'unit_name': unitName,
-      //     'notes': note,
-      //     'start_date': startdate,
-      //     'end_date': enddate,
-      //   });
-      // });
+    Map<String, String> requestData = {
+      'unit_code': unitCode,
+      'unit_name': unitName,
+      'notes': note,
+      'start_date': startdate,
+      'end_date': enddate,
+    };
 
-      Map<String, String> requestData = {
-        'unit_code': unitCode,
-        'unit_name': unitName,
-        'notes': note,
-        'start_date': startdate,
-        'end_date': enddate,
-      };
+    try {
+      var response =
+          await unitService.createUnit(requestData); // Call the API service
 
-      try {
-        var response =
-            await unitService.createUnit(requestData); // Call the API service
-
-        if (response.statusCode == 201) {
-          // Successful API response
-          showDialog(
-            context: context,
-            builder: (BuildContext context) {
-              return SimpleDialog(
-                title: const Text('Success'),
-                children: [
-                  SimpleDialogOption(
-                    onPressed: () {
-                      Navigator.pop(context); // Close the dialog
-                    },
-                    child: const Text('Unit created successfully!'),
-                  ),
-                ],
-              );
-            },
-          );
-          _fetchUnits();
-        } else {
-          // Error in API response
-          showDialog(
-            context: context,
-            builder: (BuildContext context) {
-              return SimpleDialog(
-                title: const Text('Error'),
-                children: [
-                  SimpleDialogOption(
-                    onPressed: () {
-                      Navigator.pop(context); // Close the dialog
-                    },
-                    child: Text(
-                        'Failed to create department. Status code: ${response.statusCode}\nError: ${response.body}'),
-                  ),
-                ],
-              );
-            },
-          );
-        }
-      } catch (error) {
+      if (response.statusCode == 201) {
+        // Successful API response
+        showDialog(
+          context: context,
+          builder: (BuildContext context) {
+            return SimpleDialog(
+              title: const Text('Success'),
+              children: [
+                SimpleDialogOption(
+                  onPressed: () {
+                    Navigator.pop(context); // Close the dialog
+                  },
+                  child: const Text('Unit created successfully!'),
+                ),
+              ],
+            );
+          },
+        );
+        _fetchUnits();
+      } else {
+        // Error in API response
         showDialog(
           context: context,
           builder: (BuildContext context) {
@@ -159,20 +143,38 @@ class _unitMasterScreenState extends State<unitMasterScreen> {
                   onPressed: () {
                     Navigator.pop(context); // Close the dialog
                   },
-                  child: Text('Error occurred: $error'),
+                  child: Text(
+                      'Failed to create department. Status code: ${response.statusCode}\nError: ${response.body}'),
                 ),
               ],
             );
           },
         );
       }
-
-      _unitController.clear();
-      _unitCodeController.clear();
-      _noteController.clear();
-      _startDateController.clear();
-      _endDateController.clear();
+    } catch (error) {
+      showDialog(
+        context: context,
+        builder: (BuildContext context) {
+          return SimpleDialog(
+            title: const Text('Error'),
+            children: [
+              SimpleDialogOption(
+                onPressed: () {
+                  Navigator.pop(context); // Close the dialog
+                },
+                child: Text('Error occurred: $error'),
+              ),
+            ],
+          );
+        },
+      );
     }
+
+    _unitController.clear();
+    _unitCodeController.clear();
+    _noteController.clear();
+    _startDateController.clear();
+    _endDateController.clear();
   }
 
   void _editUnit(UnitModel unit) {
@@ -187,6 +189,7 @@ class _unitMasterScreenState extends State<unitMasterScreen> {
     });
   }
 
+  // Cancel editing
   void _cancelEdit() {
     setState(() {
       _isEditing = false;
@@ -195,6 +198,7 @@ class _unitMasterScreenState extends State<unitMasterScreen> {
     });
   }
 
+  //Clear form
   void _clearForm() {
     _unitController.clear();
     _unitCodeController.clear();
@@ -318,6 +322,43 @@ class _unitMasterScreenState extends State<unitMasterScreen> {
     }
   }
 
+  //confirmation dialog
+  void _showConfirmationDialog({required String purpose, int? id}) {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: Text('$purpose Confirmation'),
+          content: Text('Are you sure you want to $purpose the Data?'),
+          actions: <Widget>[
+            TextButton(
+              child: Text('$purpose'),
+              onPressed: () {
+                if (purpose == 'Submit') {
+                  _submitForm();
+                } else if (purpose == 'Update') {
+                  _updateForm();
+                } else if (purpose == 'Delete') {
+                  _deleteUnit(id!);
+                }
+                Navigator.of(context).pop();
+              },
+            ),
+            TextButton(
+              child: const Text(
+                'Cancel',
+                style: TextStyle(color: Colors.red),
+              ),
+              onPressed: () {
+                Navigator.of(context).pop();
+              },
+            ),
+          ],
+        );
+      },
+    );
+  }
+
   Future<void> _selectDate(
       BuildContext context, TextEditingController controller) async {
     final DateTime? picked = await showDatePicker(
@@ -356,13 +397,6 @@ class _unitMasterScreenState extends State<unitMasterScreen> {
     );
   }
 
-  /// Mobile view of the unit master screen.
-  ///
-  /// Shows a form with unit code, unit, notes, start date and end date fields.
-  /// Allows the user to select start and end dates from a calendar.
-  /// Validates the form and saves the data when the user presses the save button.
-  /// If the user is not an admin, the start and end date fields are not shown.
-  ///
   Widget _mobileView() {
     return SingleChildScrollView(
       child: Padding(
@@ -372,7 +406,11 @@ class _unitMasterScreenState extends State<unitMasterScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              //  Text('Unit Code',style: TextStyle(fontSize: 15,fontWeight: FontWeight.bold),),
+              Row(mainAxisAlignment: MainAxisAlignment.center, children: [
+                Text('User Id : ${_userId}',
+                    style: TextStyle(fontWeight: FontWeight.bold)),
+              ]),
+              SizedBox(height: 10),
 
               TextFormField(
                 controller: _unitCodeController,
@@ -390,7 +428,6 @@ class _unitMasterScreenState extends State<unitMasterScreen> {
               SizedBox(height: 10),
 
               //   Text('Unit',textAlign: TextAlign.left,style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),),
-
               TextFormField(
                 controller: _unitController,
                 validator: (value) {
@@ -404,7 +441,6 @@ class _unitMasterScreenState extends State<unitMasterScreen> {
                   border: OutlineInputBorder(),
                 ),
               ),
-
               const SizedBox(
                 height: 10,
               ),
@@ -416,53 +452,43 @@ class _unitMasterScreenState extends State<unitMasterScreen> {
                 decoration: InputDecoration(
                     labelText: 'Notes', border: OutlineInputBorder()),
               ),
+              const SizedBox(height: 10),
 
-              const SizedBox(
-                height: 10,
+              //Text('Start Date',style: TextStyle(fontWeight: FontWeight.bold),),
+              TextFormField(
+                controller: _startDateController,
+                readOnly: true, // Make it read-only to prevent keyboard opening
+                onTap: () => _selectDate(context, _startDateController),
+                validator: (value) {
+                  if (value == null || value.isEmpty) {
+                    return 'Please Select Start Date';
+                  }
+                  return null;
+                },
+                decoration: const InputDecoration(
+                    labelText: 'Start Date',
+                    border: OutlineInputBorder(),
+                    suffixIcon: Icon(Icons.calendar_month)),
               ),
 
-              if (_isadmin) ...[
-                //Text('Start Date',style: TextStyle(fontWeight: FontWeight.bold),),
+              const SizedBox(height: 10),
 
-                TextFormField(
-                  controller: _startDateController,
-                  readOnly:
-                      true, // Make it read-only to prevent keyboard opening
-                  onTap: () => _selectDate(context, _startDateController),
-                  validator: (value) {
-                    if (value == null || value.isEmpty) {
-                      return 'Please Select Start Date';
-                    }
-                    return null;
-                  },
-                  decoration: const InputDecoration(
-                      labelText: 'Start Date',
-                      border: OutlineInputBorder(),
-                      suffixIcon: Icon(Icons.calendar_month)),
-                ),
-
-                const SizedBox(
-                  height: 10,
-                ),
-
-                //Text('End Date',style: TextStyle(fontWeight: FontWeight.bold),),
-                TextFormField(
-                  controller: _endDateController,
-                  readOnly:
-                      true, // Make it read-only to prevent keyboard opening
-                  onTap: () => _selectDate(context, _endDateController),
-                  validator: (value) {
-                    if (value == null || value.isEmpty) {
-                      return 'Please Select end Date';
-                    }
-                    return null;
-                  },
-                  decoration: const InputDecoration(
-                      labelText: 'End Date',
-                      border: OutlineInputBorder(),
-                      suffixIcon: Icon(Icons.calendar_month)),
-                ),
-              ],
+              //Text('End Date',style: TextStyle(fontWeight: FontWeight.bold),),
+              TextFormField(
+                controller: _endDateController,
+                readOnly: true, // Make it read-only to prevent keyboard opening
+                onTap: () => _selectDate(context, _endDateController),
+                validator: (value) {
+                  if (value == null || value.isEmpty) {
+                    return 'Please Select end Date';
+                  }
+                  return null;
+                },
+                decoration: const InputDecoration(
+                    labelText: 'End Date',
+                    border: OutlineInputBorder(),
+                    suffixIcon: Icon(Icons.calendar_month)),
+              ),
               const SizedBox(
                 height: 10,
               ),
@@ -481,7 +507,7 @@ class _unitMasterScreenState extends State<unitMasterScreen> {
                               ),
                             ),
                             onPressed: () {
-                              _updateForm();
+                              _showConfirmationDialog(purpose: "Update");
                             },
                             child: Text("Update",
                                 style: TextStyle(color: Colors.white)),
@@ -516,7 +542,11 @@ class _unitMasterScreenState extends State<unitMasterScreen> {
                             borderRadius: BorderRadius.circular(5.0),
                           ),
                         ),
-                        onPressed: _submitForm,
+                        onPressed: () {
+                          if (_formKey.currentState!.validate()) {
+                            _showConfirmationDialog(purpose: "Submit");
+                          }
+                        },
                         child: const Text(
                           'Save',
                           style: TextStyle(color: Colors.white),
@@ -532,22 +562,54 @@ class _unitMasterScreenState extends State<unitMasterScreen> {
                 itemBuilder: (context, index) {
                   return Card(
                     child: ListTile(
+                        onTap: () {
+                          showDialog(
+                              context: context,
+                              builder: (BuildContext context) {
+                                return AlertDialog(
+                                  title: Text(
+                                      'Unit Name : ${unitList[index].unit_name}'),
+                                  content: SingleChildScrollView(
+                                    child: ListBody(
+                                      children: [
+                                        Text(
+                                            'Unit Code : ${unitList[index].unit_code}'),
+                                        SizedBox(height: 5),
+                                        Text(
+                                            'Notes : ${unitList[index].notes}'),
+                                        SizedBox(height: 5),
+                                        Text(
+                                            'Start Date : ${unitList[index].start_date}'),
+                                        SizedBox(height: 5),
+                                        Text(
+                                            'End Date: ${unitList[index].end_date}'),
+                                        SizedBox(height: 5),
+                                      ],
+                                    ),
+                                  ),
+                                );
+                              });
+                        },
                         title: Text(unitList[index].unit_name),
                         subtitle: Text(unitList[index].unit_code),
                         trailing: Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
                             IconButton(
-                              icon: const Icon(Icons.delete),
                               onPressed: () {
-                                _deleteUnit(index);
+                                _editUnit(unitList[index]);
                               },
+                              icon: Icon(Icons.edit),
                             ),
-                            IconButton(
-                                onPressed: () {
-                                  _editUnit(unitList[index]);
-                                },
-                                icon: Icon(Icons.edit))
+                            _isadmin
+                                ? IconButton(
+                                    icon: const Icon(Icons.delete),
+                                    onPressed: () {
+                                      _showConfirmationDialog(
+                                          purpose: "Delete", id: index);
+                                    },
+                                  )
+                                : SizedBox(width: 0),
                           ],
                         )),
                   );
@@ -570,8 +632,20 @@ class _unitMasterScreenState extends State<unitMasterScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              //user id row
+              Row(
+                mainAxisAlignment: MainAxisAlignment.start,
+                children: [
+                  Text('User Id : ${_userId}',
+                      style: TextStyle(fontWeight: FontWeight.bold)),
+                ],
+              ),
+              SizedBox(height: 10),
+
+              //Unit Code, Unit Name, Notes Row
               Row(
                 children: [
+                  //Unit Code
                   Expanded(
                     child: TextFormField(
                       controller: _unitCodeController,
@@ -587,9 +661,8 @@ class _unitMasterScreenState extends State<unitMasterScreen> {
                       ),
                     ),
                   ),
-                  SizedBox(
-                    width: 5,
-                  ),
+                  SizedBox(width: 5),
+                  //Unit Name
                   Expanded(
                     child: TextFormField(
                       controller: _unitController,
@@ -605,9 +678,8 @@ class _unitMasterScreenState extends State<unitMasterScreen> {
                       ),
                     ),
                   ),
-                  SizedBox(
-                    width: 5,
-                  ),
+                  SizedBox(width: 5),
+                  //Notes
                   Expanded(
                     child: TextField(
                       controller: _noteController,
@@ -621,60 +693,57 @@ class _unitMasterScreenState extends State<unitMasterScreen> {
                   ),
                 ],
               ),
-              SizedBox(
-                height: 10,
-              ),
+              SizedBox(height: 10),
+
+              //Start Date, End Date Row
               Row(
                 children: [
-                  if (_isadmin) ...[
-                    Expanded(
+                  Expanded(
+                    child: TextFormField(
+                      controller: _startDateController,
+                      readOnly:
+                          true, // Make it read-only to prevent keyboard opening
+                      onTap: () => _selectDate(context, _startDateController),
+                      validator: (value) {
+                        if (value == null || value.isEmpty) {
+                          return 'Please Select Start Date';
+                        }
+                        return null;
+                      },
+                      decoration: const InputDecoration(
+                          labelText: 'Start Date',
+                          border: OutlineInputBorder(),
+                          suffixIcon: Icon(Icons.calendar_month)),
+                    ),
+                  ),
+                  const SizedBox(
+                    width: 5,
+                  ),
+                  Expanded(
+                    child: MouseRegion(
+                      cursor: SystemMouseCursors.click,
                       child: TextFormField(
-                        controller: _startDateController,
+                        controller: _endDateController,
                         readOnly:
                             true, // Make it read-only to prevent keyboard opening
-                        onTap: () => _selectDate(context, _startDateController),
+                        onTap: () => _selectDate(context, _endDateController),
                         validator: (value) {
                           if (value == null || value.isEmpty) {
-                            return 'Please Select Start Date';
+                            return 'Please Select end Date';
                           }
                           return null;
                         },
                         decoration: const InputDecoration(
-                            labelText: 'Start Date',
+                            labelText: 'End Date',
                             border: OutlineInputBorder(),
                             suffixIcon: Icon(Icons.calendar_month)),
                       ),
                     ),
-                    const SizedBox(
-                      width: 5,
-                    ),
-                    Expanded(
-                      child: MouseRegion(
-                        cursor: SystemMouseCursors.click,
-                        child: TextFormField(
-                          controller: _endDateController,
-                          readOnly:
-                              true, // Make it read-only to prevent keyboard opening
-                          onTap: () => _selectDate(context, _endDateController),
-                          validator: (value) {
-                            if (value == null || value.isEmpty) {
-                              return 'Please Select end Date';
-                            }
-                            return null;
-                          },
-                          decoration: const InputDecoration(
-                              labelText: 'End Date',
-                              border: OutlineInputBorder(),
-                              suffixIcon: Icon(Icons.calendar_month)),
-                        ),
-                      ),
-                    ),
-                  ],
+                  ),
                 ],
               ),
-              SizedBox(
-                height: 10,
-              ),
+              SizedBox(height: 10),
+
               _isEditing
                   ? Row(
                       mainAxisAlignment: MainAxisAlignment.end,
@@ -688,7 +757,7 @@ class _unitMasterScreenState extends State<unitMasterScreen> {
                             ),
                           ),
                           onPressed: () {
-                            _updateForm();
+                            _showConfirmationDialog(purpose: "Update");
                           },
                           child: Text("Update",
                               style: TextStyle(color: Colors.white)),
@@ -721,7 +790,11 @@ class _unitMasterScreenState extends State<unitMasterScreen> {
                               borderRadius: BorderRadius.circular(5.0),
                             ),
                           ),
-                          onPressed: _submitForm,
+                          onPressed: () {
+                            if (_formKey.currentState!.validate()) {
+                              _showConfirmationDialog(purpose: "Submit");
+                            }
+                          },
                           child: const Text(
                             'Save',
                             style: TextStyle(color: Colors.white),
@@ -737,22 +810,54 @@ class _unitMasterScreenState extends State<unitMasterScreen> {
                 itemBuilder: (context, index) {
                   return Card(
                     child: ListTile(
+                        onTap: () {
+                          showDialog(
+                              context: context,
+                              builder: (BuildContext context) {
+                                return AlertDialog(
+                                  title: Text(
+                                      'Unit Name : ${unitList[index].unit_name}'),
+                                  content: SingleChildScrollView(
+                                    child: ListBody(
+                                      children: [
+                                        Text(
+                                            'Unit Code : ${unitList[index].unit_code}'),
+                                        SizedBox(height: 5),
+                                        Text(
+                                            'Notes : ${unitList[index].notes}'),
+                                        SizedBox(height: 5),
+                                        Text(
+                                            'Start Date : ${unitList[index].start_date}'),
+                                        SizedBox(height: 5),
+                                        Text(
+                                            'End Date: ${unitList[index].end_date}'),
+                                        SizedBox(height: 5),
+                                      ],
+                                    ),
+                                  ),
+                                );
+                              });
+                        },
                         title: Text(unitList[index].unit_name),
                         subtitle: Text(unitList[index].unit_code),
                         trailing: Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
                             IconButton(
-                              icon: const Icon(Icons.delete),
                               onPressed: () {
-                                _deleteUnit(index);
+                                _editUnit(unitList[index]);
                               },
+                              icon: Icon(Icons.edit),
                             ),
-                            IconButton(
-                                onPressed: () {
-                                  _editUnit(unitList[index]);
-                                },
-                                icon: Icon(Icons.edit))
+                            _isadmin
+                                ? IconButton(
+                                    icon: const Icon(Icons.delete),
+                                    onPressed: () {
+                                      _showConfirmationDialog(
+                                          purpose: "Delete", id: index);
+                                    },
+                                  )
+                                : const SizedBox(width: 0),
                           ],
                         )),
                   );
@@ -764,62 +869,4 @@ class _unitMasterScreenState extends State<unitMasterScreen> {
       ),
     );
   }
-
-  // Widget _buildDataTable() {
-  //   if (unitList.isEmpty) {
-  //     return Center(child: Text('No Data available'));
-  //   }
-  //   return Center(
-  //     child: SingleChildScrollView(
-  //       scrollDirection: Axis.horizontal,
-  //       child: Padding(
-  //         padding: const EdgeInsets.all(10.0),
-  //         child: DataTable(
-  //           border: TableBorder.all(),
-  //           columns: [
-  //             DataColumn(
-  //                 label: Text(
-  //               'Unit Code',
-  //               overflow: TextOverflow.ellipsis,
-  //             )),
-  //             DataColumn(label: Text('Unit')),
-  //             DataColumn(label: Text('Start Date')),
-  //             DataColumn(label: Text('End Date')),
-  //             DataColumn(label: Text('Actions')),
-  //           ],
-  //           rows: unitList.map(
-  //             (unit) {
-  //               return DataRow(cells: [
-  //                 DataCell(Text(unit['Unit Code']!)),
-  //                 DataCell(Text(unit['Unit']!)),
-  //                 DataCell(Text(unit['Start Date']!)),
-  //                 DataCell(Text(unit['End Date']!)),
-  //                 DataCell(
-  //                   Row(
-  //                     children: [
-  //                       IconButton(
-  //                         color: Colors.blue,
-  //                         icon: Icon(Icons.edit),
-  //                         onPressed: () {
-  //                           _editUnit(unit);
-  //                         },
-  //                       ),
-  //                       IconButton(
-  //                         color: Colors.red,
-  //                         icon: Icon(Icons.delete),
-  //                         onPressed: () {
-  //                           _deleteUnit(unit);
-  //                         },
-  //                       ),
-  //                     ],
-  //                   ),
-  //                 ),
-  //               ]);
-  //             },
-  //           ).toList(),
-  //         ),
-  //       ),
-  //     ),
-  //   );
-  // }
 }

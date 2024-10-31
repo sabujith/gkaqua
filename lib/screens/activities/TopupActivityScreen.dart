@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:gk_aqua/models/department.dart';
 import 'package:gk_aqua/models/division.dart';
 import 'package:gk_aqua/models/tank.dart';
+import 'package:gk_aqua/screens/activities/TopupViewScreen.dart';
 import 'package:gk_aqua/services/api_department.dart';
 import 'package:gk_aqua/services/broodstockMortalityServices.dart';
 import 'package:gk_aqua/services/division_services.dart';
@@ -444,6 +445,30 @@ class _TopupActivityScreenState extends State<TopupActivityScreen> {
               ),
               const SizedBox(height: 10),
 
+              //View Collection Button
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  ElevatedButton(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.green,
+                        minimumSize: const Size(200, 50),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(5.0),
+                        ),
+                      ),
+                      onPressed: () {
+                        Navigator.of(context).push(MaterialPageRoute(
+                            builder: (context) => TopupView()));
+                      },
+                      child: Text(
+                        'View Topup Details',
+                        style: TextStyle(color: Colors.white),
+                      ))
+                ],
+              ),
+              const SizedBox(height: 10),
+
               //Date
               TextFormField(
                 controller: _dateController,
@@ -784,6 +809,30 @@ class _TopupActivityScreenState extends State<TopupActivityScreen> {
                     style: const TextStyle(
                         fontSize: 15, fontWeight: FontWeight.bold),
                   ),
+                ],
+              ),
+              const SizedBox(height: 10),
+
+              //View Collection Button
+              Row(
+                mainAxisAlignment: MainAxisAlignment.start,
+                children: [
+                  ElevatedButton(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.green,
+                        minimumSize: const Size(200, 50),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(5.0),
+                        ),
+                      ),
+                      onPressed: () {
+                        Navigator.of(context).push(MaterialPageRoute(
+                            builder: (context) => TopupView()));
+                      },
+                      child: Text(
+                        'View Topup Details',
+                        style: TextStyle(color: Colors.white),
+                      ))
                 ],
               ),
               const SizedBox(height: 10),

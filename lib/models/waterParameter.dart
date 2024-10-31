@@ -1,3 +1,5 @@
+import 'package:gk_aqua/models/unit_model.dart';
+
 class waterParameterModel {
   int? id;
   String? parameter_code;
@@ -6,6 +8,7 @@ class waterParameterModel {
   String? start_date;
   String? end_date;
   int? unit_id;
+  UnitModel? unit;
 
   waterParameterModel(
       {required this.id,
@@ -14,7 +17,8 @@ class waterParameterModel {
       this.notes,
       this.start_date,
       this.end_date,
-      required this.unit_id});
+      required this.unit_id,
+      this.unit});
 
   factory waterParameterModel.fromJson(Map<String, dynamic> json) {
     return waterParameterModel(
@@ -24,7 +28,8 @@ class waterParameterModel {
         notes: json['notes'],
         start_date: json['start_date'],
         end_date: json['end_date'],
-        unit_id: json['unit_id']);
+        unit_id: json['unit_id'],
+        unit: json['unit'] != null ? UnitModel.fromJson(json['unit']) : null);
   }
 
   toJson() {}

@@ -24,6 +24,7 @@ class Waterparametersform extends StatefulWidget {
 
 class _WaterparametersformState extends State<Waterparametersform> {
   final _formKey = GlobalKey<FormState>();
+  String? _userId;
   waterParameterModel?
       _selectedWaterparameter; //to store selected water parameter for editing or deletion
   List<waterParameterModel> _waterparameters = [];
@@ -42,7 +43,16 @@ class _WaterparametersformState extends State<Waterparametersform> {
     // TODO: implement initState
     super.initState();
     _fetchWaterparameters();
+    _getUserDetails();
     _getUnits(context);
+  }
+
+  //get User Details
+  void _getUserDetails() async {
+    setState(() {
+      _userId = 'user123';
+      _isadmin = true;
+    });
   }
 
   @override
@@ -347,6 +357,43 @@ class _WaterparametersformState extends State<Waterparametersform> {
     }
   }
 
+  //confirmation dialog
+  void _showConfirmationDialog({required String purpose, int? id}) {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: Text('$purpose Confirmation'),
+          content: Text('Are you sure you want to $purpose the Data?'),
+          actions: <Widget>[
+            TextButton(
+              child: Text('$purpose'),
+              onPressed: () {
+                if (purpose == 'Submit') {
+                  _submitForm();
+                } else if (purpose == 'Update') {
+                  _updateForm();
+                } else if (purpose == 'Delete') {
+                  _deleteWaterParameter(id!);
+                }
+                Navigator.of(context).pop();
+              },
+            ),
+            TextButton(
+              child: const Text(
+                'Cancel',
+                style: TextStyle(color: Colors.red),
+              ),
+              onPressed: () {
+                Navigator.of(context).pop();
+              },
+            ),
+          ],
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -374,19 +421,11 @@ class _WaterparametersformState extends State<Waterparametersform> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const SizedBox(
-                height: 10,
-              ),
-              const Center(
-                  child: Text(
-                'WATER PARAMETERS',
-                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-              )),
-              // Text(
-              //   'Water Parameters',
-              //   textAlign: TextAlign.left,
-              //   style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-              // ),
+              Row(mainAxisAlignment: MainAxisAlignment.center, children: [
+                Text('User Id : ${_userId}',
+                    style: TextStyle(fontWeight: FontWeight.bold)),
+              ]),
+              SizedBox(height: 10),
               TextFormField(
                 controller: _parameterController,
                 validator: (value) {
@@ -439,7 +478,6 @@ class _WaterparametersformState extends State<Waterparametersform> {
                   return null;
                 },
               ),
-
               const SizedBox(height: 10),
               TextField(
                 controller: _noteController,
@@ -448,52 +486,46 @@ class _WaterparametersformState extends State<Waterparametersform> {
                     labelText: 'Notes', border: OutlineInputBorder()),
               ),
               const SizedBox(height: 10),
+              //Text('Start Date',style: TextStyle(fontWeight: FontWeight.bold),),
 
-              if (_isadmin) ...[
-                //Text('Start Date',style: TextStyle(fontWeight: FontWeight.bold),),
+              TextFormField(
+                controller: _startDateController,
+                readOnly: true, // Make it read-only to prevent keyboard opening
+                onTap: () => _selectDate(context, _startDateController),
+                validator: (value) {
+                  if (value == null || value.isEmpty) {
+                    return 'Please Select Start Date';
+                  }
+                  return null;
+                },
+                decoration: const InputDecoration(
+                    labelText: 'Start Date',
+                    border: OutlineInputBorder(),
+                    suffixIcon: Icon(Icons.calendar_month)),
+              ),
 
-                TextFormField(
-                  controller: _startDateController,
-                  readOnly:
-                      true, // Make it read-only to prevent keyboard opening
-                  onTap: () => _selectDate(context, _startDateController),
-                  validator: (value) {
-                    if (value == null || value.isEmpty) {
-                      return 'Please Select Start Date';
-                    }
-                    return null;
-                  },
-                  decoration: const InputDecoration(
-                      labelText: 'Start Date',
-                      border: OutlineInputBorder(),
-                      suffixIcon: Icon(Icons.calendar_month)),
-                ),
+              const SizedBox(height: 10),
 
-                const SizedBox(height: 10),
-
-                //Text('End Date',style: TextStyle(fontWeight: FontWeight.bold),),
-                TextFormField(
-                  controller: _endDateController,
-                  readOnly:
-                      true, // Make it read-only to prevent keyboard opening
-                  onTap: () => _selectDate(context, _endDateController),
-                  validator: (value) {
-                    if (value == null || value.isEmpty) {
-                      return 'Please Select end Date';
-                    }
-                    return null;
-                  },
-                  decoration: const InputDecoration(
-                      labelText: 'End Date',
-                      border: OutlineInputBorder(),
-                      suffixIcon: Icon(Icons.calendar_month)),
-                ),
-              ],
+              //Text('End Date',style: TextStyle(fontWeight: FontWeight.bold),),
+              TextFormField(
+                controller: _endDateController,
+                readOnly: true, // Make it read-only to prevent keyboard opening
+                onTap: () => _selectDate(context, _endDateController),
+                validator: (value) {
+                  if (value == null || value.isEmpty) {
+                    return 'Please Select end Date';
+                  }
+                  return null;
+                },
+                decoration: const InputDecoration(
+                    labelText: 'End Date',
+                    border: OutlineInputBorder(),
+                    suffixIcon: Icon(Icons.calendar_month)),
+              ),
 
               const SizedBox(
                 height: 10,
               ),
-
               _isEditing
                   ? Row(
                       children: [
@@ -507,9 +539,9 @@ class _WaterparametersformState extends State<Waterparametersform> {
                                   borderRadius: BorderRadius.circular(5),
                                 )),
                             onPressed: () {
-                              _updateForm();
+                              _showConfirmationDialog(purpose: 'Update');
                             },
-                            child: Text(
+                            child: const Text(
                               "Update",
                               style: TextStyle(color: Colors.white),
                             ),
@@ -543,7 +575,11 @@ class _WaterparametersformState extends State<Waterparametersform> {
                           borderRadius: BorderRadius.circular(5),
                         ),
                       ),
-                      onPressed: _submitForm,
+                      onPressed: () {
+                        if (_formKey.currentState!.validate()) {
+                          _showConfirmationDialog(purpose: 'Submit');
+                        }
+                      },
                       child: const Text(
                         'Submit',
                         style: TextStyle(color: Colors.white),
@@ -558,6 +594,34 @@ class _WaterparametersformState extends State<Waterparametersform> {
                   final waterParameter = _waterparameters[index];
                   return Card(
                     child: ListTile(
+                      onTap: () {
+                        // print(waterParameter.unit.unit_name);
+                        showDialog(
+                            context: context,
+                            builder: (BuildContext context) {
+                              return AlertDialog(
+                                title: Text(
+                                    'Parameter Name : ${waterParameter.parameter_name}'),
+                                content: SingleChildScrollView(
+                                  child: ListBody(
+                                    children: [
+                                      Text(
+                                          'Parameter Code : ${waterParameter.parameter_code}'),
+                                      SizedBox(height: 5),
+                                      Text('Notes : ${waterParameter.notes}'),
+                                      SizedBox(height: 5),
+                                      Text(
+                                          'Start Date : ${waterParameter.start_date}'),
+                                      SizedBox(height: 5),
+                                      Text(
+                                          'End Date: ${waterParameter.end_date}'),
+                                      SizedBox(height: 5),
+                                    ],
+                                  ),
+                                ),
+                              );
+                            });
+                      },
                       title: Text(waterParameter.parameter_name!),
                       subtitle: Text(waterParameter.parameter_code!),
                       trailing: Row(
@@ -569,12 +633,14 @@ class _WaterparametersformState extends State<Waterparametersform> {
                               _editWaterparameter(waterParameter);
                             },
                           ),
-                          IconButton(
-                            icon: Icon(Icons.delete),
-                            onPressed: () {
-                              _deleteWaterParameter(index);
-                            },
-                          ),
+                          _isadmin
+                              ? IconButton(
+                                  icon: Icon(Icons.delete),
+                                  onPressed: () {
+                                    _showConfirmationDialog(
+                                        purpose: 'Delete', id: index);
+                                  })
+                              : SizedBox(width: 0)
                         ],
                       ),
                     ),
@@ -597,11 +663,11 @@ class _WaterparametersformState extends State<Waterparametersform> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Center(
-                    child: Text(
-                  'WATER PARAMETERS',
-                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                )),
+                Row(mainAxisAlignment: MainAxisAlignment.start, children: [
+                  Text('User Id : ${_userId}',
+                      style: TextStyle(fontWeight: FontWeight.bold)),
+                ]),
+                SizedBox(height: 10),
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
@@ -697,48 +763,45 @@ class _WaterparametersformState extends State<Waterparametersform> {
                 ),
                 Row(
                   children: [
-                    if (_isadmin) ...[
-                      Expanded(
-                        child: TextFormField(
-                          controller: _startDateController,
-                          readOnly:
-                              true, // Make it read-only to prevent keyboard opening
-                          onTap: () =>
-                              _selectDate(context, _startDateController),
-                          validator: (value) {
-                            if (value == null || value.isEmpty) {
-                              return 'Please Select Start Date';
-                            }
-                            return null;
-                          },
-                          decoration: const InputDecoration(
-                              labelText: 'Start Date',
-                              border: OutlineInputBorder(),
-                              suffixIcon: Icon(Icons.calendar_month)),
-                        ),
+                    Expanded(
+                      child: TextFormField(
+                        controller: _startDateController,
+                        readOnly:
+                            true, // Make it read-only to prevent keyboard opening
+                        onTap: () => _selectDate(context, _startDateController),
+                        validator: (value) {
+                          if (value == null || value.isEmpty) {
+                            return 'Please Select Start Date';
+                          }
+                          return null;
+                        },
+                        decoration: const InputDecoration(
+                            labelText: 'Start Date',
+                            border: OutlineInputBorder(),
+                            suffixIcon: Icon(Icons.calendar_month)),
                       ),
-                      const SizedBox(
-                        width: 5,
+                    ),
+                    const SizedBox(
+                      width: 5,
+                    ),
+                    Expanded(
+                      child: TextFormField(
+                        controller: _endDateController,
+                        readOnly:
+                            true, // Make it read-only to prevent keyboard opening
+                        onTap: () => _selectDate(context, _endDateController),
+                        validator: (value) {
+                          if (value == null || value.isEmpty) {
+                            return 'Please Select end Date';
+                          }
+                          return null;
+                        },
+                        decoration: const InputDecoration(
+                            labelText: 'End Date',
+                            border: OutlineInputBorder(),
+                            suffixIcon: Icon(Icons.calendar_month)),
                       ),
-                      Expanded(
-                        child: TextFormField(
-                          controller: _endDateController,
-                          readOnly:
-                              true, // Make it read-only to prevent keyboard opening
-                          onTap: () => _selectDate(context, _endDateController),
-                          validator: (value) {
-                            if (value == null || value.isEmpty) {
-                              return 'Please Select end Date';
-                            }
-                            return null;
-                          },
-                          decoration: const InputDecoration(
-                              labelText: 'End Date',
-                              border: OutlineInputBorder(),
-                              suffixIcon: Icon(Icons.calendar_month)),
-                        ),
-                      ),
-                    ],
+                    ),
                   ],
                 ),
                 SizedBox(
@@ -757,7 +820,7 @@ class _WaterparametersformState extends State<Waterparametersform> {
                               ),
                             ),
                             onPressed: () {
-                              _updateForm();
+                              _showConfirmationDialog(purpose: "Update");
                             },
                             child: Text("Update",
                                 style: TextStyle(color: Colors.white)),
@@ -790,7 +853,11 @@ class _WaterparametersformState extends State<Waterparametersform> {
                                 borderRadius: BorderRadius.circular(5.0),
                               ),
                             ),
-                            onPressed: _submitForm,
+                            onPressed: () {
+                              if (_formKey.currentState!.validate()) {
+                                _showConfirmationDialog(purpose: "Submit");
+                              }
+                            },
                             child: const Text(
                               'Save',
                               style: TextStyle(color: Colors.white),
@@ -807,6 +874,34 @@ class _WaterparametersformState extends State<Waterparametersform> {
                     final waterParameter = _waterparameters[index];
                     return Card(
                       child: ListTile(
+                        onTap: () {
+                          // print(waterParameter.unit.unit_name);
+                          showDialog(
+                              context: context,
+                              builder: (BuildContext context) {
+                                return AlertDialog(
+                                  title: Text(
+                                      'Parameter Name : ${waterParameter.parameter_name}'),
+                                  content: SingleChildScrollView(
+                                    child: ListBody(
+                                      children: [
+                                        Text(
+                                            'Parameter Code : ${waterParameter.parameter_code}'),
+                                        SizedBox(height: 5),
+                                        Text('Notes : ${waterParameter.notes}'),
+                                        SizedBox(height: 5),
+                                        Text(
+                                            'Start Date : ${waterParameter.start_date}'),
+                                        SizedBox(height: 5),
+                                        Text(
+                                            'End Date: ${waterParameter.end_date}'),
+                                        SizedBox(height: 5),
+                                      ],
+                                    ),
+                                  ),
+                                );
+                              });
+                        },
                         title: Text(waterParameter.parameter_name!),
                         subtitle: Text(waterParameter.parameter_code!),
                         trailing: Row(
@@ -818,12 +913,15 @@ class _WaterparametersformState extends State<Waterparametersform> {
                                 _editWaterparameter(waterParameter);
                               },
                             ),
-                            IconButton(
-                              icon: Icon(Icons.delete),
-                              onPressed: () {
-                                _deleteWaterParameter(index);
-                              },
-                            ),
+                            _isadmin
+                                ? IconButton(
+                                    icon: Icon(Icons.delete),
+                                    onPressed: () {
+                                      _showConfirmationDialog(
+                                          purpose: "Delete", id: index);
+                                    },
+                                  )
+                                : const SizedBox(width: 0)
                           ],
                         ),
                       ),

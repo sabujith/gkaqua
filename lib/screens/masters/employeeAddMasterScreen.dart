@@ -27,6 +27,7 @@ class EmployeeAdd extends StatefulWidget {
 
 class _EmployeeAddState extends State<EmployeeAdd> {
   final _formKey = GlobalKey<FormState>();
+  String? _userId;
   final _employeeIdController = TextEditingController();
   final _employeeNameController = TextEditingController();
   String? _selectedDocType;
@@ -58,6 +59,7 @@ class _EmployeeAddState extends State<EmployeeAdd> {
   void initState() {
     super.initState();
     _initializeData(); // New async method for initialization
+    _getUserDetails();
   }
 
   Future<void> _initializeData() async {
@@ -102,6 +104,13 @@ class _EmployeeAddState extends State<EmployeeAdd> {
     _enddateController.dispose();
     _noteController.dispose();
     super.dispose();
+  }
+
+  //get User Details
+  Future<void> _getUserDetails() async {
+    setState(() {
+      _userId = 'user 123';
+    });
   }
 
 // Function to get the departments from the API
@@ -149,79 +158,78 @@ class _EmployeeAddState extends State<EmployeeAdd> {
 // Function to submit the form
   Future<void> _submitform() async {
     EmployeeServices employeeServices = EmployeeServices();
-    if (_formKey.currentState!.validate()) {
-      // Get the values from the form
-      String employeeId = _employeeIdController.text;
-      String employeeName = _employeeNameController.text;
-      String documentType = _selectedDocType ?? '';
-      String mycad_or_passport_no = _mycad_or_passport_noController.text;
-      String dept = _selectedDept!.id.toString();
-      String employeeMobile = _employeeMobileController.text;
-      String employeeAddress = _employeeAddressController.text;
-      String bloodGrp = _selectedBloodGrp ?? '';
-      String note = _noteController.text;
-      String startdate = _startdateController.text;
-      String enddate = _enddateController.text;
 
-      Map<String, dynamic> requestData = {
-        'employee_code': employeeId,
-        'name': employeeName,
-        'mobile': employeeMobile,
-        'address': employeeAddress,
-        'document_type': documentType,
-        'mycad_or_passport_no': mycad_or_passport_no,
-        'department_id': dept,
-        'blood_group': bloodGrp,
-        'notes': note,
-        'start_date': startdate,
-        'end_date': enddate
-      };
+    // Get the values from the form
+    String employeeId = _employeeIdController.text;
+    String employeeName = _employeeNameController.text;
+    String documentType = _selectedDocType ?? '';
+    String mycad_or_passport_no = _mycad_or_passport_noController.text;
+    String dept = _selectedDept!.id.toString();
+    String employeeMobile = _employeeMobileController.text;
+    String employeeAddress = _employeeAddressController.text;
+    String bloodGrp = _selectedBloodGrp ?? '';
+    String note = _noteController.text;
+    String startdate = _startdateController.text;
+    String enddate = _enddateController.text;
 
-      try {
-        var response = await employeeServices.createEmployee(requestData);
+    Map<String, dynamic> requestData = {
+      'employee_code': employeeId,
+      'name': employeeName,
+      'mobile': employeeMobile,
+      'address': employeeAddress,
+      'document_type': documentType,
+      'mycad_or_passport_no': mycad_or_passport_no,
+      'department_id': dept,
+      'blood_group': bloodGrp,
+      'notes': note,
+      'start_date': startdate,
+      'end_date': enddate
+    };
 
-        // print('response.statusCode ${response.statusCode}');
-        // print('response.body ${response.body}');
+    try {
+      var response = await employeeServices.createEmployee(requestData);
 
-        if (response.statusCode == 201) {
-          showDialog(
-              context: context,
-              builder: (BuildContext context) {
-                return SimpleDialog(
-                  title: const Text('Success'),
-                  children: [
-                    SimpleDialogOption(
-                      onPressed: () {
-                        Navigator.pop(context); // Close the dialog
-                      },
-                      child: const Text('New Employee added successfully!'),
-                    ),
-                  ],
-                );
-              });
+      // print('response.statusCode ${response.statusCode}');
+      // print('response.body ${response.body}');
 
-          _clearForm();
-        } else {
-          // print('error in else case : ${response.body}');
-          throw 'Failed to create employee';
-        }
-      } catch (e) {
+      if (response.statusCode == 201) {
         showDialog(
             context: context,
             builder: (BuildContext context) {
               return SimpleDialog(
-                title: const Text('Error'),
+                title: const Text('Success'),
                 children: [
                   SimpleDialogOption(
                     onPressed: () {
                       Navigator.pop(context); // Close the dialog
                     },
-                    child: Text('Something went wrong \n$e'),
+                    child: const Text('New Employee added successfully!'),
                   ),
                 ],
               );
             });
+
+        _clearForm();
+      } else {
+        // print('error in else case : ${response.body}');
+        throw 'Failed to create employee';
       }
+    } catch (e) {
+      showDialog(
+          context: context,
+          builder: (BuildContext context) {
+            return SimpleDialog(
+              title: const Text('Error'),
+              children: [
+                SimpleDialogOption(
+                  onPressed: () {
+                    Navigator.pop(context); // Close the dialog
+                  },
+                  child: Text('Something went wrong \n$e'),
+                ),
+              ],
+            );
+          });
     }
   }
 
@@ -323,6 +331,41 @@ class _EmployeeAddState extends State<EmployeeAdd> {
     });
   }
 
+  //confirmation dialog
+  void _showConfirmationDialog({required String purpose}) {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: Text('$purpose Confirmation'),
+          content: Text('Are you sure you want to $purpose the Data?'),
+          actions: <Widget>[
+            TextButton(
+              child: Text('$purpose'),
+              onPressed: () {
+                if (purpose == 'Submit') {
+                  _submitform();
+                } else if (purpose == 'Update') {
+                  _updateEmployee();
+                }
+                Navigator.of(context).pop();
+              },
+            ),
+            TextButton(
+              child: const Text(
+                'Cancel',
+                style: TextStyle(color: Colors.red),
+              ),
+              onPressed: () {
+                Navigator.of(context).pop();
+              },
+            ),
+          ],
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -353,6 +396,11 @@ class _EmployeeAddState extends State<EmployeeAdd> {
           key: _formKey,
           child: Column(
             children: [
+              Row(mainAxisAlignment: MainAxisAlignment.center, children: [
+                Text('User Id : ${_userId}',
+                    style: TextStyle(fontWeight: FontWeight.bold)),
+              ]),
+              SizedBox(height: 10),
               Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
@@ -407,17 +455,7 @@ class _EmployeeAddState extends State<EmployeeAdd> {
                 ],
               ),
               SizedBox(height: 10),
-              // const Text('MASTERS/EMPLOYEE-ADD',style: TextStyle(fontSize: 25,fontWeight: FontWeight.bold)),
-              // Padding(
-              //   padding: const EdgeInsets.all(10),
-              //   child: const Text(
-              //     'Employee Code',
-              //     style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-              //   ),
-              // ),
-              // SizedBox(
 
-              //   height: 10),
               TextFormField(
                 controller: _employeeIdController,
                 validator: (value) {
@@ -430,13 +468,6 @@ class _EmployeeAddState extends State<EmployeeAdd> {
                     border: OutlineInputBorder(), labelText: 'Employee Code'),
               ),
 
-              // Padding(
-              //   padding: const EdgeInsets.all(10),
-              //   child: const Text(
-              //     'Employee Name',
-              //     style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-              //   ),
-              // ),
               SizedBox(height: 10),
               TextFormField(
                 controller: _employeeNameController,
@@ -450,13 +481,6 @@ class _EmployeeAddState extends State<EmployeeAdd> {
                     border: OutlineInputBorder(), labelText: 'Employee Name'),
               ),
 
-              // Padding(
-              //   padding: const EdgeInsets.all(10),
-              //   child: const Text(
-              //     'Department',
-              //     style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-              //   ),
-              // ),
               SizedBox(height: 10),
               DropdownButtonFormField<String>(
                 value: _selectedDocType,
@@ -518,13 +542,6 @@ class _EmployeeAddState extends State<EmployeeAdd> {
                 },
               ),
 
-              // Padding(
-              //   padding: const EdgeInsets.all(10),
-              //   child: const Text(
-              //     'Mob',
-              //     style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-              //   ),
-              // ),
               SizedBox(height: 10),
               TextFormField(
                 controller: _employeeMobileController,
@@ -540,13 +557,6 @@ class _EmployeeAddState extends State<EmployeeAdd> {
                     border: OutlineInputBorder(), labelText: 'Mob'),
               ),
 
-              // Padding(
-              //   padding: const EdgeInsets.all(10),
-              //   child: const Text(
-              //     'Address',
-              //     style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-              //   ),
-              // ),
               SizedBox(height: 10),
               TextFormField(
                 controller: _employeeAddressController,
@@ -560,13 +570,6 @@ class _EmployeeAddState extends State<EmployeeAdd> {
                     border: OutlineInputBorder(), labelText: 'Address'),
               ),
 
-              // Padding(
-              //   padding: const EdgeInsets.all(10),
-              //   child: const Text(
-              //     'Blood Grp',
-              //     style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-              //   ),
-              // ),
               SizedBox(height: 10),
               DropdownButtonFormField<String>(
                 value: _selectedBloodGrp,
@@ -591,21 +594,6 @@ class _EmployeeAddState extends State<EmployeeAdd> {
                 },
               ),
 
-              // Padding(
-              //   padding: const EdgeInsets.all(10),
-              //   child: const Text(
-              //     'MyCad/Passport No',
-              //     style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-              //   ),
-              // ),
-
-              // Padding(
-              //   padding: const EdgeInsets.all(10),
-              //   child: const Text(
-              //     'Note',
-              //     style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-              //   ),
-              // ),
               SizedBox(height: 10),
 
               TextField(
@@ -616,50 +604,42 @@ class _EmployeeAddState extends State<EmployeeAdd> {
               ),
               SizedBox(height: 10),
 
-              if (_isadmin) ...[
-                //Conditionally show date fields if user is an admin
-                // Padding(
-                //   padding: const EdgeInsets.all(10),
-                //   child: const Text('Start Date',
-                //       style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
-                // ),
-                TextFormField(
-                  controller: _startdateController,
-                  readOnly: true,
-                  onTap: () => _selectDate(context, _startdateController),
-                  validator: (value) {
-                    if (value == null || value.isEmpty) {
-                      return 'Please select a start date';
-                    }
-                    return null;
-                  },
-                  decoration: InputDecoration(
-                      border: const OutlineInputBorder(),
-                      suffixIcon: Icon(Icons.calendar_today),
-                      labelText: 'Start Date'),
-                ),
-                SizedBox(height: 10),
-                // Padding(
-                //   padding: const EdgeInsets.all(10),
-                //   child: const Text('End Date',
-                //       style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
-                // ),
-                TextFormField(
-                  controller: _enddateController,
-                  readOnly: true,
-                  onTap: () => _selectDate(context, _enddateController),
-                  validator: (value) {
-                    if (value == null || value.isEmpty) {
-                      return 'Please select a End date';
-                    }
-                    return null;
-                  },
-                  decoration: InputDecoration(
-                      border: const OutlineInputBorder(),
-                      suffixIcon: Icon(Icons.calendar_today),
-                      labelText: 'End Date'),
-                ),
-              ],
+              TextFormField(
+                controller: _startdateController,
+                readOnly: true,
+                onTap: () => _selectDate(context, _startdateController),
+                validator: (value) {
+                  if (value == null || value.isEmpty) {
+                    return 'Please select a start date';
+                  }
+                  return null;
+                },
+                decoration: InputDecoration(
+                    border: const OutlineInputBorder(),
+                    suffixIcon: Icon(Icons.calendar_today),
+                    labelText: 'Start Date'),
+              ),
+              SizedBox(height: 10),
+              // Padding(
+              //   padding: const EdgeInsets.all(10),
+              //   child: const Text('End Date',
+              //       style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+              // ),
+              TextFormField(
+                controller: _enddateController,
+                readOnly: true,
+                onTap: () => _selectDate(context, _enddateController),
+                validator: (value) {
+                  if (value == null || value.isEmpty) {
+                    return 'Please select a End date';
+                  }
+                  return null;
+                },
+                decoration: InputDecoration(
+                    border: const OutlineInputBorder(),
+                    suffixIcon: Icon(Icons.calendar_today),
+                    labelText: 'End Date'),
+              ),
 
               SizedBox(height: 10),
               isEditing
@@ -674,7 +654,9 @@ class _EmployeeAddState extends State<EmployeeAdd> {
                                 borderRadius: BorderRadius.circular(5.0),
                               ),
                             ),
-                            onPressed: _updateEmployee,
+                            onPressed: () {
+                              _showConfirmationDialog(purpose: "Update");
+                            },
                             child: Text(
                               'Update',
                               style: TextStyle(color: Colors.white),
@@ -707,7 +689,11 @@ class _EmployeeAddState extends State<EmployeeAdd> {
                           borderRadius: BorderRadius.circular(5.0),
                         ),
                       ),
-                      onPressed: _submitform,
+                      onPressed: () {
+                        if (_formKey.currentState!.validate()) {
+                          _showConfirmationDialog(purpose: "Submit");
+                        }
+                      },
                       child: const Text('Save',
                           style: TextStyle(color: Colors.white)),
                     ),
@@ -726,6 +712,11 @@ class _EmployeeAddState extends State<EmployeeAdd> {
             key: _formKey,
             child: Column(
               children: [
+                Row(mainAxisAlignment: MainAxisAlignment.start, children: [
+                  Text('User Id : ${_userId}',
+                      style: TextStyle(fontWeight: FontWeight.bold)),
+                ]),
+                SizedBox(height: 10),
                 Row(
                   mainAxisAlignment: MainAxisAlignment.start,
                   children: [
@@ -984,46 +975,43 @@ class _EmployeeAddState extends State<EmployeeAdd> {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    if (_isadmin) ...[
-                      Expanded(
-                        child: TextFormField(
-                          controller: _startdateController,
-                          readOnly: true,
-                          onTap: () =>
-                              _selectDate(context, _startdateController),
-                          validator: (value) {
-                            if (value == null || value.isEmpty) {
-                              return 'Please select a start date';
-                            }
-                            return null;
-                          },
-                          decoration: InputDecoration(
-                              border: const OutlineInputBorder(),
-                              suffixIcon: Icon(Icons.calendar_today),
-                              labelText: 'Start Date'),
-                        ),
+                    Expanded(
+                      child: TextFormField(
+                        controller: _startdateController,
+                        readOnly: true,
+                        onTap: () => _selectDate(context, _startdateController),
+                        validator: (value) {
+                          if (value == null || value.isEmpty) {
+                            return 'Please select a start date';
+                          }
+                          return null;
+                        },
+                        decoration: InputDecoration(
+                            border: const OutlineInputBorder(),
+                            suffixIcon: Icon(Icons.calendar_today),
+                            labelText: 'Start Date'),
                       ),
-                      SizedBox(
-                        width: 10,
+                    ),
+                    SizedBox(
+                      width: 10,
+                    ),
+                    Expanded(
+                      child: TextFormField(
+                        controller: _enddateController,
+                        readOnly: true,
+                        onTap: () => _selectDate(context, _enddateController),
+                        validator: (value) {
+                          if (value == null || value.isEmpty) {
+                            return 'Please select a End date';
+                          }
+                          return null;
+                        },
+                        decoration: InputDecoration(
+                            border: const OutlineInputBorder(),
+                            suffixIcon: Icon(Icons.calendar_today),
+                            labelText: 'End Date'),
                       ),
-                      Expanded(
-                        child: TextFormField(
-                          controller: _enddateController,
-                          readOnly: true,
-                          onTap: () => _selectDate(context, _enddateController),
-                          validator: (value) {
-                            if (value == null || value.isEmpty) {
-                              return 'Please select a End date';
-                            }
-                            return null;
-                          },
-                          decoration: InputDecoration(
-                              border: const OutlineInputBorder(),
-                              suffixIcon: Icon(Icons.calendar_today),
-                              labelText: 'End Date'),
-                        ),
-                      ),
-                    ],
+                    ),
                   ],
                 ),
                 SizedBox(height: 20),
@@ -1039,7 +1027,9 @@ class _EmployeeAddState extends State<EmployeeAdd> {
                               ),
                               backgroundColor: Colors.blue,
                             ),
-                            onPressed: _updateEmployee,
+                            onPressed: () {
+                              _showConfirmationDialog(purpose: "Update");
+                            },
                             child: const Text('Update',
                                 style: TextStyle(
                                     fontWeight: FontWeight.bold,
@@ -1073,7 +1063,11 @@ class _EmployeeAddState extends State<EmployeeAdd> {
                               ),
                               backgroundColor: Colors.blue,
                             ),
-                            onPressed: _submitform,
+                            onPressed: () {
+                              if (_formKey.currentState!.validate()) {
+                                _showConfirmationDialog(purpose: "Submit");
+                              }
+                            },
                             child: const Text('Submit',
                                 style: TextStyle(
                                     fontWeight: FontWeight.bold,
