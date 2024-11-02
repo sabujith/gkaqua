@@ -62,6 +62,7 @@ class _EmployeeAddState extends State<EmployeeAdd> {
     _getUserDetails();
   }
 
+  // Initialize data for updation
   Future<void> _initializeData() async {
     await _getDepartments(); // Wait for departments to be fetched
     setState(() {
@@ -413,7 +414,7 @@ class _EmployeeAddState extends State<EmployeeAdd> {
                                 borderRadius: BorderRadius.circular(5.0),
                               )),
                           onPressed: _cancelUpdate,
-                          child: Wrap(
+                          child: const Wrap(
                             children: [
                               Text(
                                 "Add Employee",
@@ -440,7 +441,7 @@ class _EmployeeAddState extends State<EmployeeAdd> {
                               ),
                             );
                           },
-                          child: Wrap(
+                          child: const Wrap(
                             children: [
                               Text(
                                 "View Employees",
@@ -614,7 +615,7 @@ class _EmployeeAddState extends State<EmployeeAdd> {
                   }
                   return null;
                 },
-                decoration: InputDecoration(
+                decoration: const InputDecoration(
                     border: const OutlineInputBorder(),
                     suffixIcon: Icon(Icons.calendar_today),
                     labelText: 'Start Date'),
@@ -635,7 +636,7 @@ class _EmployeeAddState extends State<EmployeeAdd> {
                   }
                   return null;
                 },
-                decoration: InputDecoration(
+                decoration:const InputDecoration(
                     border: const OutlineInputBorder(),
                     suffixIcon: Icon(Icons.calendar_today),
                     labelText: 'End Date'),
@@ -657,7 +658,7 @@ class _EmployeeAddState extends State<EmployeeAdd> {
                             onPressed: () {
                               _showConfirmationDialog(purpose: "Update");
                             },
-                            child: Text(
+                            child: const Text(
                               'Update',
                               style: TextStyle(color: Colors.white),
                             ),
@@ -729,7 +730,7 @@ class _EmployeeAddState extends State<EmployeeAdd> {
                                   borderRadius: BorderRadius.circular(5.0),
                                 )),
                             onPressed: _cancelUpdate,
-                            child: Wrap(
+                            child: const Wrap(
                               children: [
                                 Text(
                                   "Add Employee",
@@ -756,7 +757,7 @@ class _EmployeeAddState extends State<EmployeeAdd> {
                                 ),
                               );
                             },
-                            child: Wrap(
+                            child:const Wrap(
                               children: [
                                 Text(
                                   "View Employees",
@@ -1028,7 +1029,9 @@ class _EmployeeAddState extends State<EmployeeAdd> {
                               backgroundColor: Colors.blue,
                             ),
                             onPressed: () {
-                              _showConfirmationDialog(purpose: "Update");
+                              if (_formKey.currentState!.validate()) {
+                                _showConfirmationDialog(purpose: "Update");
+                              }
                             },
                             child: const Text('Update',
                                 style: TextStyle(

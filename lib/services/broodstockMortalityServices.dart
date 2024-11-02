@@ -53,7 +53,8 @@ class BroodstockMortalityService {
   }
 
   //update mortality
-  Future<void> updateMortality(Map<String, dynamic> requestData, int id) async {
+  Future<http.Response> updateMortality(
+      Map<String, dynamic> requestData, int id) async {
     var url = Uri.parse('$apiUrl/$id');
     try {
       var response = await http.put(
@@ -64,6 +65,7 @@ class BroodstockMortalityService {
       if (response.statusCode != 200) {
         throw Exception('Failed to update mortality');
       }
+      return response;
     } catch (error) {
       throw Exception('Failed to connect to API: $error');
     }
@@ -128,5 +130,4 @@ class BroodstockMortalityService {
       throw Exception('Failed to connect to API: $error');
     }
   }
-
 }

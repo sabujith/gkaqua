@@ -1,4 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:gk_aqua/models/department.dart';
+import 'package:gk_aqua/models/division.dart';
+import 'package:gk_aqua/models/tank.dart';
+import 'package:gk_aqua/screens/activities/TopupActivityScreen.dart';
 import 'package:gk_aqua/services/topup_services.dart';
 
 class TopupView extends StatelessWidget {
@@ -50,7 +54,7 @@ class _TopupViewScreenState extends State<TopupViewScreen> {
   Future<void> _getUserDetails() async {
     setState(() {
       _userId = "user123";
-      _isAdmin = true;
+      _isAdmin = false;
     });
   }
 
@@ -274,6 +278,44 @@ class _TopupViewScreenState extends State<TopupViewScreen> {
                                     icon: Icon(Icons.edit),
                                     onPressed: () {
                                       // Edit
+                                      final departmentData =
+                                          topup['department'];
+                                      final Department department =
+                                          Department.fromJson(departmentData);
+                                      final divisionData = topup['division'];
+                                      final DivisionModel division =
+                                          DivisionModel.fromJson(divisionData);
+                                      final tankData = topup['tank'];
+                                      final TankModel tank =
+                                          TankModel.fromJson(tankData);
+
+                                      final Map<String, dynamic> updatedData = {
+                                        'id': topup['id'],
+                                        'date': topup['date'],
+                                        // 'employee_code': topup['employee_code'],
+                                        'departmentId': department.id,
+                                        'divisionId': division.id,
+                                        'tankId': tank.id,
+                                        'weekStart': topup['week_start'],
+                                        'weekEnd': topup['week_end'],
+                                        'malePrawnMortalityCount':
+                                            topup['male_prawn_mortality_count'],
+                                        'femalePrawnMortalityCount': topup[
+                                            'female_prawn_mortality_count'],
+                                        'malePrawnTopupCount':
+                                            topup['male_prawn_topup_count'],
+                                        'femalePrawnTopupCount':
+                                            topup['female_prawn_topup_count'],
+                                        'notes': topup['notes'],
+                                      };
+
+                                      Navigator.of(context).push(
+                                          MaterialPageRoute(builder: (context) {
+                                        return TopupActivityScreen(
+                                          topupUpdateData: updatedData,
+                                          isEditing: true,
+                                        );
+                                      }));
                                     },
                                   ),
                                   _isAdmin

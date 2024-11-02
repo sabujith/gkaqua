@@ -115,12 +115,6 @@ class _EmployeeViewMasterScreenState extends State<EmployeeViewMasterScreen> {
     }
   }
 
-  //edit employee
-  Future<void> _editEmployee(int index) async {
-    final Map<String, dynamic> selectedEmployee = EmployeesDet[index];
-    print(selectedEmployee['id']);
-  }
-
   //confirmation dialog
   void _showConfirmationDialog({required String purpose, int? id}) {
     showDialog(

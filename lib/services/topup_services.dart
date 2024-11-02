@@ -59,16 +59,16 @@ class TopupService {
   }
 
   //update topup
-  Future<dynamic> updateTopup(int id, Map<String, dynamic> requestData) async {
+  Future<http.Response> updateTopup(
+      int id, Map<String, dynamic> requestData) async {
     var url = Uri.parse('$baseUrl/$id');
     try {
-      var response = await http.put(url, body: requestData);
-      if (response.statusCode == 200) {
-        var jsonData = jsonDecode(response.body);
-        return jsonData;
-      } else {
-        throw Exception('Failed to update topup');
-      }
+      var response = await http.put(
+        url,
+        headers: {"Content-Type": "application/json"},
+        body: jsonEncode(requestData),
+      );
+      return response;
     } catch (error) {
       print('Error in Services : $error');
       throw Exception('Failed to connect to API: $error');

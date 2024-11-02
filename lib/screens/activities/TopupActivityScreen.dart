@@ -10,6 +10,8 @@ import 'package:gk_aqua/services/tank_services.dart';
 import 'package:gk_aqua/services/topup_services.dart';
 
 class ActivityTopup extends StatelessWidget {
+  const ActivityTopup({super.key});
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -19,7 +21,11 @@ class ActivityTopup extends StatelessWidget {
 }
 
 class TopupActivityScreen extends StatefulWidget {
-  const TopupActivityScreen({super.key});
+  final Map<String, dynamic> topupUpdateData;
+  final bool isEditing;
+
+  const TopupActivityScreen(
+      {super.key, this.topupUpdateData = const {}, this.isEditing = false});
 
   @override
   State<TopupActivityScreen> createState() => _TopupActivityScreenState();
@@ -49,8 +55,10 @@ class _TopupActivityScreenState extends State<TopupActivityScreen> {
   List<TankModel> tanks = [];
 
   bool _isLoading = false;
-  bool _isCheckingMortalityCount = false;
-  bool _isFormSubmit = false;
+  // bool _isCheckingMortalityCount = false;
+  // bool _isFormSubmit = false;
+  bool _isAdmin = true;
+  bool isEditing = false;
 
   @override
   void initState() {
@@ -68,11 +76,52 @@ class _TopupActivityScreenState extends State<TopupActivityScreen> {
     await _getDepartments();
     await _getDivisions();
     await _getTanks();
+    await _initializeData();
     setState(() {
       _isLoading = false;
     });
   }
 
+  //Initialize data for editing
+  Future<void> _initializeData() async {
+    if (widget.isEditing && widget.topupUpdateData != null) {
+      setState(() {
+        isEditing = true;
+        _dateController.text = widget.topupUpdateData['date'];
+        _selectedDepartment = departments.fold(null, (previousValue, element) {
+          if (element.id == widget.topupUpdateData['departmentId']) {
+            return element;
+          }
+          return previousValue;
+        });
+        _selectedDivision = divisions.fold(null, (previousValue, element) {
+          if (element.id == widget.topupUpdateData['divisionId']) {
+            return element;
+          }
+          return previousValue;
+        });
+        _selectedTank = tanks.fold(null, (previousValue, element) {
+          if (element.id == widget.topupUpdateData['tankId']) {
+            return element;
+          }
+          return previousValue;
+        });
+        _weekStartController.text = widget.topupUpdateData['weekStart'];
+        _weekEndController.text = widget.topupUpdateData['weekEnd'];
+        _malePrawnMortalityCountController.text =
+            widget.topupUpdateData['malePrawnMortalityCount'].toString();
+        _femalePrawnMortalityCountController.text =
+            widget.topupUpdateData['femalePrawnMortalityCount'].toString();
+        _malePrawnTopupCountController.text =
+            widget.topupUpdateData['malePrawnTopupCount'].toString();
+        _femalePrawnTopupCountController.text =
+            widget.topupUpdateData['femalePrawnTopupCount'].toString();
+        _notesController.text = widget.topupUpdateData['notes'];
+      });
+    }
+  }
+
+  // get user details
   void _getUserDetails() async {
     setState(() {
       _userId = "user123";
@@ -368,19 +417,143 @@ class _TopupActivityScreenState extends State<TopupActivityScreen> {
     }
   }
 
+  //Update Topup
+  void _updateTopup() async {
+    int id = widget.topupUpdateData['id'];
+    String date = _dateController.text;
+    String employee_code = _userId!;
+    int department_id = _selectedDepartment!.id;
+    int? division_id = _selectedDivision!.id;
+    int? tank_id = _selectedTank!.id;
+    String week_start = _weekStartController.text;
+    String week_end = _weekEndController.text;
+    String male_prawn_mortality_count = _malePrawnMortalityCountController.text;
+    String female_prawn_mortality_count =
+        _femalePrawnMortalityCountController.text;
+    String male_prawn_topup_count = _malePrawnTopupCountController.text;
+    String female_prawn_topup_count = _femalePrawnTopupCountController.text;
+    String? notes = _notesController.text;
+
+    Map<String, dynamic> requestData = {
+      'date': date,
+      'employee_code': employee_code,
+      'department_id': department_id,
+      'division_id': division_id,
+      'tank_id': tank_id,
+      'week_start': week_start,
+      'week_end': week_end,
+      'male_prawn_mortality_count': male_prawn_mortality_count,
+      'female_prawn_mortality_count': female_prawn_mortality_count,
+      'male_prawn_topup_count': male_prawn_topup_count,
+      'female_prawn_topup_count': female_prawn_topup_count,
+      'notes': notes
+    };
+
+    try {
+      TopupService topupService = TopupService();
+
+      var responce = await topupService.updateTopup(id, requestData);
+      if (responce.statusCode == 200) {
+        showDialog(
+          context: context,
+          builder: (BuildContext context) {
+            return SimpleDialog(
+              title: const Text('Updated'),
+              children: [
+                SimpleDialogOption(
+                  onPressed: () {
+                    Navigator.pop(context);
+                  },
+                  child: const Text('Topup updated successfully'),
+                )
+              ],
+            );
+          },
+        );
+        setState(() {
+          isEditing = false;
+        });
+        _clearForm();
+      } else
+        throw 'Failed to update topup';
+    } catch (e) {
+      showDialog(
+          context: context,
+          builder: (BuildContext context) {
+            return SimpleDialog(
+              title: const Text('Error'),
+              children: [
+                SimpleDialogOption(
+                  onPressed: () {
+                    Navigator.pop(context);
+                  },
+                  child: Text(e.toString()),
+                )
+              ],
+            );
+          });
+    }
+  }
+
+  //cancel Update
+  void _cancelUpdate() {
+    setState(() {
+      isEditing = false;
+    });
+
+    _clearForm();
+  }
+
   //clear form
   void _clearForm() {
-    _dateController.clear();
-    _selectedDepartment = null;
-    _selectedDivision = null;
-    _selectedTank = null;
-    _weekStartController.clear();
-    _weekEndController.clear();
-    _malePrawnMortalityCountController.clear();
-    _femalePrawnMortalityCountController.clear();
-    _malePrawnTopupCountController.clear();
-    _femalePrawnTopupCountController.clear();
-    _notesController.clear();
+    setState(() {
+      _dateController.clear();
+      _selectedDepartment = null;
+      _selectedDivision = null;
+      _selectedTank = null;
+      _weekStartController.clear();
+      _weekEndController.clear();
+      _malePrawnMortalityCountController.clear();
+      _femalePrawnMortalityCountController.clear();
+      _malePrawnTopupCountController.clear();
+      _femalePrawnTopupCountController.clear();
+      _notesController.clear();
+    });
+  }
+
+  //confirmation dialog
+  void _showConfirmationDialog({required String purpose}) {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: Text('$purpose Confirmation'),
+          content: Text('Are you sure you want to $purpose the Data?'),
+          actions: <Widget>[
+            TextButton(
+              child: Text('$purpose'),
+              onPressed: () {
+                if (purpose == 'Submit') {
+                  _submitForm();
+                } else if (purpose == 'Update') {
+                  _updateTopup();
+                }
+                Navigator.of(context).pop();
+              },
+            ),
+            TextButton(
+              child: const Text(
+                'Cancel',
+                style: TextStyle(color: Colors.red),
+              ),
+              onPressed: () {
+                Navigator.of(context).pop();
+              },
+            ),
+          ],
+        );
+      },
+    );
   }
 
   @override
@@ -449,22 +622,54 @@ class _TopupActivityScreenState extends State<TopupActivityScreen> {
               Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  ElevatedButton(
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.green,
-                        minimumSize: const Size(200, 50),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(5.0),
+                  isEditing
+                      ? ElevatedButton(
+                          style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.green,
+                              minimumSize: Size(200, 50),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(5.0),
+                              )),
+                          onPressed: _cancelUpdate,
+                          child: const Wrap(
+                            children: [
+                              Text(
+                                "Add New Topup",
+                                style: TextStyle(color: Colors.white),
+                              ),
+                              SizedBox(width: 10),
+                              Icon(Icons.add, color: Colors.white)
+                            ],
+                          ),
+                        )
+                      : ElevatedButton(
+                          style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.green,
+                              minimumSize: Size(200, 50),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(5.0),
+                              )),
+                          onPressed: () {
+                            Navigator.of(context).push(
+                              MaterialPageRoute(
+                                builder: (context) {
+                                  return TopupView();
+                                },
+                              ),
+                            );
+                          },
+                          child: const Wrap(
+                            children: [
+                              Text(
+                                "View Topup Details",
+                                style: TextStyle(color: Colors.white),
+                              ),
+                              SizedBox(width: 10),
+                              Icon(Icons.remove_red_eye_outlined,
+                                  color: Colors.white)
+                            ],
+                          ),
                         ),
-                      ),
-                      onPressed: () {
-                        Navigator.of(context).push(MaterialPageRoute(
-                            builder: (context) => TopupView()));
-                      },
-                      child: Text(
-                        'View Topup Details',
-                        style: TextStyle(color: Colors.white),
-                      ))
                 ],
               ),
               const SizedBox(height: 10),
@@ -759,6 +964,7 @@ class _TopupActivityScreenState extends State<TopupActivityScreen> {
               //notes
               TextFormField(
                 controller: _notesController,
+                maxLines: 3,
                 decoration: const InputDecoration(
                   labelText: 'Notes',
                   border: OutlineInputBorder(),
@@ -767,24 +973,61 @@ class _TopupActivityScreenState extends State<TopupActivityScreen> {
               const SizedBox(height: 10),
 
               //Update Button
-              ElevatedButton(
-                style: ElevatedButton.styleFrom(
-                  minimumSize: const Size(double.infinity, 50),
-                  backgroundColor: Colors.blue,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(5.0),
-                  ),
-                ),
-                onPressed: () {
-                  if (_formKey.currentState!.validate()) {
-                    _submitForm();
-                  }
-                },
-                child: Text(
-                  'Update',
-                  style: TextStyle(color: Colors.white),
-                ),
-              )
+              isEditing
+                  ? Row(
+                      children: [
+                        Expanded(
+                          child: ElevatedButton(
+                            style: ElevatedButton.styleFrom(
+                              minimumSize: const Size(double.infinity, 50),
+                              backgroundColor: Colors.blue,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(5.0),
+                              ),
+                            ),
+                            onPressed: () {
+                              _showConfirmationDialog(purpose: "Update");
+                            },
+                            child: Text(
+                              'Update',
+                              style: TextStyle(color: Colors.white),
+                            ),
+                          ),
+                        ),
+                        SizedBox(width: 10),
+                        Expanded(
+                            child: ElevatedButton(
+                          style: ElevatedButton.styleFrom(
+                            minimumSize: const Size(double.infinity, 50),
+                            backgroundColor: Colors.red,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(5.0),
+                            ),
+                          ),
+                          onPressed: () {
+                            _cancelUpdate();
+                          },
+                          child: const Text('Cancel',
+                              style: TextStyle(color: Colors.white)),
+                        ))
+                      ],
+                    )
+                  : ElevatedButton(
+                      style: ElevatedButton.styleFrom(
+                        minimumSize: const Size(double.infinity, 50),
+                        backgroundColor: Colors.blue,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(5.0),
+                        ),
+                      ),
+                      onPressed: () {
+                        if (_formKey.currentState!.validate()) {
+                          _showConfirmationDialog(purpose: "Submit");
+                        }
+                      },
+                      child: const Text('Submit',
+                          style: TextStyle(color: Colors.white)),
+                    ),
             ],
           ),
         ),
@@ -817,22 +1060,54 @@ class _TopupActivityScreenState extends State<TopupActivityScreen> {
               Row(
                 mainAxisAlignment: MainAxisAlignment.start,
                 children: [
-                  ElevatedButton(
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.green,
-                        minimumSize: const Size(200, 50),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(5.0),
+                  isEditing
+                      ? ElevatedButton(
+                          style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.green,
+                              minimumSize: Size(200, 50),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(5.0),
+                              )),
+                          onPressed: _cancelUpdate,
+                          child: Wrap(
+                            children: [
+                              Text(
+                                "Add New Topup",
+                                style: TextStyle(color: Colors.white),
+                              ),
+                              SizedBox(width: 10),
+                              Icon(Icons.add, color: Colors.white)
+                            ],
+                          ),
+                        )
+                      : ElevatedButton(
+                          style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.green,
+                              minimumSize: Size(200, 50),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(5.0),
+                              )),
+                          onPressed: () {
+                            Navigator.of(context).push(
+                              MaterialPageRoute(
+                                builder: (context) {
+                                  return TopupView();
+                                },
+                              ),
+                            );
+                          },
+                          child: Wrap(
+                            children: [
+                              Text(
+                                "View Topup",
+                                style: TextStyle(color: Colors.white),
+                              ),
+                              SizedBox(width: 10),
+                              Icon(Icons.remove_red_eye_outlined,
+                                  color: Colors.white)
+                            ],
+                          ),
                         ),
-                      ),
-                      onPressed: () {
-                        Navigator.of(context).push(MaterialPageRoute(
-                            builder: (context) => TopupView()));
-                      },
-                      child: Text(
-                        'View Topup Details',
-                        style: TextStyle(color: Colors.white),
-                      ))
                 ],
               ),
               const SizedBox(height: 10),
@@ -1149,6 +1424,7 @@ class _TopupActivityScreenState extends State<TopupActivityScreen> {
               //notes
               TextFormField(
                 controller: _notesController,
+                maxLines: null,
                 decoration: const InputDecoration(
                   labelText: 'Notes',
                   border: OutlineInputBorder(),
@@ -1157,29 +1433,68 @@ class _TopupActivityScreenState extends State<TopupActivityScreen> {
               const SizedBox(height: 10),
 
               //Update Button
-              Row(
-                mainAxisAlignment: MainAxisAlignment.end,
-                children: [
-                  ElevatedButton(
-                    style: ElevatedButton.styleFrom(
-                      minimumSize: const Size(200, 50),
-                      backgroundColor: Colors.blue,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(5.0),
-                      ),
-                    ),
-                    onPressed: () {
-                      if (_formKey.currentState!.validate()) {
-                        _submitForm();
-                      }
-                    },
-                    child: Text(
-                      'Update',
-                      style: TextStyle(color: Colors.white),
-                    ),
-                  )
-                ],
-              )
+              isEditing
+                  ? Row(
+                      mainAxisAlignment: MainAxisAlignment.end,
+                      children: [
+                        ElevatedButton(
+                          style: ElevatedButton.styleFrom(
+                            minimumSize: Size(200, 50),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(5.0),
+                            ),
+                            backgroundColor: Colors.blue,
+                          ),
+                          onPressed: () {
+                            if (_formKey.currentState!.validate()) {
+                              _showConfirmationDialog(purpose: "Update");
+                            }
+                          },
+                          child: const Text('Update',
+                              style: TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.white)),
+                        ),
+                        SizedBox(width: 10),
+                        ElevatedButton(
+                          style: ElevatedButton.styleFrom(
+                            minimumSize: Size(200, 50),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(5.0),
+                            ),
+                            backgroundColor: Colors.red,
+                          ),
+                          onPressed: _cancelUpdate,
+                          child: const Text('Cancel',
+                              style: TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.white)),
+                        ),
+                      ],
+                    )
+                  : Row(
+                      mainAxisAlignment: MainAxisAlignment.end,
+                      children: [
+                        ElevatedButton(
+                          style: ElevatedButton.styleFrom(
+                            minimumSize: Size(200, 50),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(5.0),
+                            ),
+                            backgroundColor: Colors.blue,
+                          ),
+                          onPressed: () {
+                            if (_formKey.currentState!.validate()) {
+                              _showConfirmationDialog(purpose: "Submit");
+                            }
+                          },
+                          child: const Text('Submit',
+                              style: TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.white)),
+                        ),
+                      ],
+                    )
             ],
           ),
         ),

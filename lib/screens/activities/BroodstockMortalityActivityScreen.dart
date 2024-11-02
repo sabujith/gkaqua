@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:gk_aqua/models/department.dart';
 import 'package:gk_aqua/models/division.dart';
 import 'package:gk_aqua/models/tank.dart';
+import 'package:gk_aqua/screens/activities/BroodstockMortalityViewScreen.dart';
 import 'package:gk_aqua/services/api_department.dart';
 import 'package:gk_aqua/services/broodstockMortalityServices.dart';
 import 'package:gk_aqua/services/division_services.dart';
@@ -19,7 +20,11 @@ class BroodstockMortality extends StatelessWidget {
 }
 
 class BroodstockMortalityActivityScreen extends StatefulWidget {
-  const BroodstockMortalityActivityScreen({super.key});
+  final Map<String, dynamic>? broodstockMortalityData;
+  final bool isEditing;
+
+  const BroodstockMortalityActivityScreen(
+      {super.key, this.broodstockMortalityData, this.isEditing = false});
 
   @override
   State<BroodstockMortalityActivityScreen> createState() =>
@@ -43,6 +48,8 @@ class _BroodstockMortalityActivityScreenState
   List<TankModel> tanks = [];
 
   bool _isLoading = false;
+  bool _isAdmin = false;
+  bool _isEditing = false;
 
   @override
   void initState() {
@@ -52,7 +59,7 @@ class _BroodstockMortalityActivityScreenState
     _fetchData();
   }
 
-  //
+  // fetch data
   void _fetchData() async {
     setState(() {
       _isLoading = true;
@@ -62,12 +69,12 @@ class _BroodstockMortalityActivityScreenState
     try {
       // First, fetch departments
       await _getDepartments();
-
       // Then, after fetching departments, fetch divisions
       await _getDivisions();
-
       // Finally, fetch tanks
       await _getTanks();
+
+      await _initializeData();
     } catch (e) {
       // Handle errors if necessary
       print('Error fetching data: $e');
@@ -76,6 +83,40 @@ class _BroodstockMortalityActivityScreenState
     setState(() {
       _isLoading = false;
     });
+  }
+
+  //initialize data for updation
+  Future<void> _initializeData() async {
+    if (widget.isEditing && widget.broodstockMortalityData != null) {
+      setState(() {
+        _isEditing = true;
+
+        _dateController.text = widget.broodstockMortalityData!['date'];
+        _selectedDivision = divisions.fold(null, (previousValue, element) {
+          if (element.id == widget.broodstockMortalityData!['divisionId']) {
+            return element;
+          } else {
+            return previousValue;
+          }
+        });
+        _selectedTankCode = tanks.fold(null, (previousValue, element) {
+          if (element.id == widget.broodstockMortalityData!['tankId']) {
+            return element;
+          } else {
+            return previousValue;
+          }
+        });
+        _malePrawnController.text =
+            widget.broodstockMortalityData!['malePrawn'].toString();
+        _femalePrawnController.text =
+            widget.broodstockMortalityData!['femalePrawn'].toString();
+        _noteController.text = widget.broodstockMortalityData!['notes'] ?? '';
+      });
+    } else {
+      setState(() {
+        _isEditing = false;
+      });
+    }
   }
 
 // get user details
@@ -92,15 +133,17 @@ class _BroodstockMortalityActivityScreenState
       List<Department> fetchedDepartments =
           await departmentService.fetchDepartments();
 
-      setState(() {
-        departments = fetchedDepartments;
-        //if any of the department name is "Broodstock" then set _selectedDepartment to that department
-        if (departments
-            .any((department) => department.departmentName == "Broodstock")) {
-          _selectedDepartment = departments.firstWhere(
-              (department) => department.departmentName == "Broodstock");
-        }
-      });
+      setState(
+        () {
+          departments = fetchedDepartments;
+          //if any of the department name is "Broodstock" then set _selectedDepartment to that department
+          if (departments
+              .any((department) => department.departmentName == "Broodstock")) {
+            _selectedDepartment = departments.firstWhere(
+                (department) => department.departmentName == "Broodstock");
+          }
+        },
+      );
     } catch (e) {
       showDialog(
         context: context,
@@ -177,7 +220,6 @@ class _BroodstockMortalityActivityScreenState
           tanks = fetchedTanks;
         });
       }
-      print(tanks);
     } catch (e) {
       bool isTankUnavailable =
           e.toString().contains('No Tanks found under this Criteria');
@@ -224,75 +266,183 @@ class _BroodstockMortalityActivityScreenState
     }
   }
 
+  //confirmation dialog
+  void _showConfirmationDialog({required String purpose}) {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: Text('$purpose Confirmation'),
+          content: Text('Are you sure you want to $purpose the Data?'),
+          actions: <Widget>[
+            TextButton(
+              child: Text('$purpose'),
+              onPressed: () {
+                if (purpose == 'Submit') {
+                  _submitForm();
+                } else if (purpose == 'Update') {
+                  _updateBroodstockMortality();
+                }
+                Navigator.of(context).pop();
+              },
+            ),
+            TextButton(
+              child: const Text(
+                'Cancel',
+                style: TextStyle(color: Colors.red),
+              ),
+              onPressed: () {
+                Navigator.of(context).pop();
+              },
+            ),
+          ],
+        );
+      },
+    );
+  }
+
   //submit form
   void _submitForm() async {
     BroodstockMortalityService broodstockMortalityService =
         BroodstockMortalityService();
 
-    if (_formKey.currentState!.validate()) {
-      String date = _dateController.text;
-      String? employeeId = UserId;
-      int? departmentId = _selectedDepartment!.id;
-      int? divisionId = _selectedDivision!.id;
-      int? tankId = _selectedTankCode!.id;
-      String malePrawn = _malePrawnController.text;
-      String femalePrawn = _femalePrawnController.text;
-      String note = _noteController.text;
+    String date = _dateController.text;
+    String? employeeId = UserId;
+    int? departmentId = _selectedDepartment!.id ?? 0;
+    int? divisionId = _selectedDivision!.id ?? 0;
+    int? tankId = _selectedTankCode!.id ?? 0;
+    String malePrawn = _malePrawnController.text;
+    String femalePrawn = _femalePrawnController.text;
+    String note = _noteController.text;
 
-      Map<String, dynamic> requestData = {
-        'date': date,
-        'employee_code': employeeId,
-        'department_id': departmentId,
-        'division_id': divisionId,
-        'tank_id': tankId,
-        'male_prawn_count': malePrawn,
-        'female_prawn_count': femalePrawn,
-        'notes': note
-      };
+    Map<String, dynamic> requestData = {
+      'date': date,
+      'employee_code': employeeId,
+      'department_id': departmentId,
+      'division_id': divisionId,
+      'tank_id': tankId,
+      'male_prawn_count': malePrawn,
+      'female_prawn_count': femalePrawn,
+      'notes': note
+    };
 
-      try {
-        var response =
-            await broodstockMortalityService.createMortality(requestData);
-        print(response);
+    try {
+      var response =
+          await broodstockMortalityService.createMortality(requestData);
+      print(response);
 
-        if (response.statusCode == 201) {
-          showDialog(
-            context: context,
-            builder: (BuildContext context) {
-              return SimpleDialog(
-                title: const Text('Success'),
-                children: [
-                  SimpleDialogOption(
-                    onPressed: () {
-                      Navigator.pop(context);
-                    },
-                    child: const Text('Mortality added successfully!'),
-                  )
-                ],
-              );
-            },
-          );
-
-          _clearForm();
-        } else {
-          throw 'Failed to add mortality';
-        }
-      } catch (e) {
+      if (response.statusCode == 201) {
         showDialog(
           context: context,
           builder: (BuildContext context) {
-            return SimpleDialog(title: const Text('Error'), children: [
-              SimpleDialogOption(
-                onPressed: () {
-                  Navigator.pop(context);
-                },
-                child: Text(e.toString()),
-              )
-            ]);
+            return SimpleDialog(
+              title: const Text('Success'),
+              children: [
+                SimpleDialogOption(
+                  onPressed: () {
+                    Navigator.pop(context);
+                  },
+                  child: const Text('Mortality added successfully!'),
+                )
+              ],
+            );
           },
         );
+
+        _clearForm();
+      } else {
+        throw 'Failed to add mortality';
       }
+    } catch (e) {
+      showDialog(
+        context: context,
+        builder: (BuildContext context) {
+          return SimpleDialog(title: const Text('Error'), children: [
+            SimpleDialogOption(
+              onPressed: () {
+                Navigator.pop(context);
+              },
+              child: Text(e.toString()),
+            )
+          ]);
+        },
+      );
     }
+  }
+
+  //update form
+  void _updateBroodstockMortality() async {
+    int? id = widget.broodstockMortalityData!['id'] as int;
+    String date = _dateController.text;
+    String? employeeId = UserId;
+    int? departmentId = _selectedDepartment!.id;
+    int? divisionId = _selectedDivision!.id;
+    int? tankId = _selectedTankCode!.id;
+    String malePrawn = _malePrawnController.text;
+    String femalePrawn = _femalePrawnController.text;
+    String note = _noteController.text;
+
+    Map<String, dynamic> requestData = {
+      'date': date,
+      'employee_code': employeeId,
+      'department_id': departmentId,
+      'division_id': divisionId,
+      'tank_id': tankId,
+      'male_prawn_count': malePrawn,
+      'female_prawn_count': femalePrawn,
+      'notes': note
+    };
+
+    try {
+      var response =
+          await BroodstockMortalityService().updateMortality(requestData, id);
+
+      if (response.statusCode == 200) {
+        showDialog(
+          context: context,
+          builder: (BuildContext context) {
+            return SimpleDialog(
+              title: const Text('Success'),
+              children: [
+                SimpleDialogOption(
+                  onPressed: () {
+                    Navigator.pop(context);
+                  },
+                  child: const Text('Mortality updated successfully!'),
+                )
+              ],
+            );
+          },
+        );
+
+        _clearForm();
+      } else {
+        throw 'Failed to update mortality';
+      }
+    } catch (e) {
+      showDialog(
+        context: context,
+        builder: (BuildContext context) {
+          return SimpleDialog(title: const Text('Error'), children: [
+            SimpleDialogOption(
+              onPressed: () {
+                Navigator.pop(context);
+              },
+              child: Text(e.toString()),
+            )
+          ]);
+        },
+      );
+    }
+  }
+
+  //cancel update
+  void _cancelUpdate() {
+    setState(() {
+      _isEditing = false;
+
+      _clearForm();
+    });
   }
 
   //clear form
@@ -369,6 +519,62 @@ class _BroodstockMortalityActivityScreenState
                 ],
               ),
               SizedBox(height: 10),
+
+              //View Button
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  _isEditing
+                      ? ElevatedButton(
+                          style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.green,
+                              minimumSize: Size(200, 50),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(5.0),
+                              )),
+                          onPressed: _cancelUpdate,
+                          child: const Wrap(
+                            children: [
+                              Text(
+                                "Add Mortality",
+                                style: TextStyle(color: Colors.white),
+                              ),
+                              SizedBox(width: 10),
+                              Icon(Icons.add, color: Colors.white)
+                            ],
+                          ),
+                        )
+                      : ElevatedButton(
+                          style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.green,
+                              minimumSize: Size(200, 50),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(5.0),
+                              )),
+                          onPressed: () {
+                            Navigator.of(context).push(
+                              MaterialPageRoute(
+                                builder: (context) {
+                                  return BroodstockMortalityView();
+                                },
+                              ),
+                            );
+                          },
+                          child: const Wrap(
+                            children: [
+                              Text(
+                                "View Mortality Details",
+                                style: TextStyle(color: Colors.white),
+                              ),
+                              SizedBox(width: 10),
+                              Icon(Icons.remove_red_eye_outlined,
+                                  color: Colors.white)
+                            ],
+                          ),
+                        ),
+                ],
+              ),
+              const SizedBox(height: 10),
 
               // Date
               TextFormField(
@@ -520,6 +726,7 @@ class _BroodstockMortalityActivityScreenState
 
               //Note
               TextFormField(
+                maxLines: 3,
                 controller: _noteController,
                 decoration: const InputDecoration(
                     labelText: 'Note', border: OutlineInputBorder()),
@@ -527,24 +734,65 @@ class _BroodstockMortalityActivityScreenState
               SizedBox(height: 10),
 
               // Submit Button
-              ElevatedButton(
-                style: ElevatedButton.styleFrom(
-                  minimumSize: const Size(double.infinity, 50),
-                  backgroundColor: Colors.blue,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(5.0),
-                  ),
-                ),
-                onPressed: () {
-                  if (_formKey.currentState!.validate()) {
-                    _submitForm();
-                  }
-                },
-                child: const Text(
-                  'Submit',
-                  style: TextStyle(color: Colors.white),
-                ),
-              )
+              _isEditing
+                  ? Row(
+                      children: [
+                        Expanded(
+                          child: ElevatedButton(
+                            style: ElevatedButton.styleFrom(
+                              minimumSize: const Size(double.infinity, 50),
+                              backgroundColor: Colors.blue,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(5.0),
+                              ),
+                            ),
+                            onPressed: () {
+                              if (_formKey.currentState!.validate()) {
+                                _showConfirmationDialog(purpose: "Update");
+                              }
+                            },
+                            child: Text(
+                              'Update',
+                              style: TextStyle(color: Colors.white),
+                            ),
+                          ),
+                        ),
+                        SizedBox(width: 10),
+                        Expanded(
+                            child: ElevatedButton(
+                          style: ElevatedButton.styleFrom(
+                            minimumSize: const Size(double.infinity, 50),
+                            backgroundColor: Colors.red,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(5.0),
+                            ),
+                          ),
+                          onPressed: () {
+                            _cancelUpdate();
+                          },
+                          child: const Text('Cancel',
+                              style: TextStyle(color: Colors.white)),
+                        ))
+                      ],
+                    )
+                  : ElevatedButton(
+                      style: ElevatedButton.styleFrom(
+                        minimumSize: const Size(double.infinity, 50),
+                        backgroundColor: Colors.blue,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(5.0),
+                        ),
+                      ),
+                      onPressed: () {
+                        if (_formKey.currentState!.validate()) {
+                          _submitForm();
+                        }
+                      },
+                      child: const Text(
+                        'Submit',
+                        style: TextStyle(color: Colors.white),
+                      ),
+                    )
             ],
           ),
         ),
@@ -570,6 +818,62 @@ class _BroodstockMortalityActivityScreenState
                 ],
               ),
               SizedBox(height: 10),
+
+              //View Button
+              Row(
+                mainAxisAlignment: MainAxisAlignment.start,
+                children: [
+                  _isEditing
+                      ? ElevatedButton(
+                          style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.green,
+                              minimumSize: Size(200, 50),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(5.0),
+                              )),
+                          onPressed: _cancelUpdate,
+                          child: const Wrap(
+                            children: [
+                              Text(
+                                "Add Mortality Record",
+                                style: TextStyle(color: Colors.white),
+                              ),
+                              SizedBox(width: 10),
+                              Icon(Icons.add, color: Colors.white)
+                            ],
+                          ),
+                        )
+                      : ElevatedButton(
+                          style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.green,
+                              minimumSize: Size(200, 50),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(5.0),
+                              )),
+                          onPressed: () {
+                            Navigator.of(context).push(
+                              MaterialPageRoute(
+                                builder: (context) {
+                                  return BroodstockMortalityView();
+                                },
+                              ),
+                            );
+                          },
+                          child: const Wrap(
+                            children: [
+                              Text(
+                                "View Mortality Records",
+                                style: TextStyle(color: Colors.white),
+                              ),
+                              SizedBox(width: 10),
+                              Icon(Icons.remove_red_eye_outlined,
+                                  color: Colors.white)
+                            ],
+                          ),
+                        ),
+                ],
+              ),
+              const SizedBox(height: 10),
 
               //Date and Department Row
               Row(
@@ -644,7 +948,7 @@ class _BroodstockMortalityActivityScreenState
                   ),
                 ],
               ),
-              SizedBox(height: 10),
+              const SizedBox(height: 10),
 
               // Division and Tank Row
               Row(
@@ -678,7 +982,7 @@ class _BroodstockMortalityActivityScreenState
                           return null;
                         }),
                   ),
-                  SizedBox(width: 10),
+                  const SizedBox(width: 10),
 
                   // Tank Dropdown
                   Expanded(
@@ -707,8 +1011,9 @@ class _BroodstockMortalityActivityScreenState
                   ),
                 ],
               ),
-              SizedBox(height: 10),
+              const SizedBox(height: 10),
 
+              //Prawns Mortality Number Row
               Row(
                 mainAxisAlignment: MainAxisAlignment.start,
                 children: [
@@ -728,7 +1033,7 @@ class _BroodstockMortalityActivityScreenState
                       },
                     ),
                   ),
-                  SizedBox(width: 10),
+                  const SizedBox(width: 10),
 
                   // Female Prawns Mortality Number Input
                   Expanded(
@@ -752,6 +1057,7 @@ class _BroodstockMortalityActivityScreenState
 
               //Note Input
               TextFormField(
+                maxLines: null,
                 controller: _noteController,
                 decoration: const InputDecoration(
                     labelText: 'Note', border: OutlineInputBorder()),
@@ -759,25 +1065,68 @@ class _BroodstockMortalityActivityScreenState
               SizedBox(height: 10),
 
               // Submit Button
-              Row(
-                mainAxisAlignment: MainAxisAlignment.end,
-                children: [
-                  ElevatedButton(
-                    style: ElevatedButton.styleFrom(
-                      minimumSize: const Size(200, 50),
-                      backgroundColor: Colors.blue,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(5.0),
-                      ),
-                    ),
-                    onPressed: _submitForm,
-                    child: const Text(
-                      'Submit',
-                      style: TextStyle(color: Colors.white),
-                    ),
-                  ),
-                ],
-              )
+              _isEditing
+                  ? Row(
+                      mainAxisAlignment: MainAxisAlignment.end,
+                      children: [
+                        ElevatedButton(
+                          style: ElevatedButton.styleFrom(
+                            minimumSize: Size(200, 50),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(5.0),
+                            ),
+                            backgroundColor: Colors.blue,
+                          ),
+                          onPressed: () {
+                            if (_formKey.currentState!.validate()) {
+                              _showConfirmationDialog(purpose: "Update");
+                            }
+                          },
+                          child: const Text('Update',
+                              style: TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.white)),
+                        ),
+                        SizedBox(width: 10),
+                        ElevatedButton(
+                          style: ElevatedButton.styleFrom(
+                            minimumSize: Size(200, 50),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(5.0),
+                            ),
+                            backgroundColor: Colors.red,
+                          ),
+                          onPressed: _cancelUpdate,
+                          child: const Text('Cancel',
+                              style: TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.white)),
+                        ),
+                      ],
+                    )
+                  : Row(
+                      mainAxisAlignment: MainAxisAlignment.end,
+                      children: [
+                        ElevatedButton(
+                          style: ElevatedButton.styleFrom(
+                            minimumSize: Size(200, 50),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(5.0),
+                            ),
+                            backgroundColor: Colors.blue,
+                          ),
+                          onPressed: () {
+                            if (_formKey.currentState!.validate()) {
+                              _showConfirmationDialog(purpose: "Submit");
+                            }
+                          },
+                          child: const Text('Submit',
+                              style: TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.white)),
+                        ),
+                      ],
+                    )
             ],
           ),
         ),
