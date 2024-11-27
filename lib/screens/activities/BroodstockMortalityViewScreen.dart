@@ -28,27 +28,32 @@ class BroodstockMortalityViewScreen extends StatefulWidget {
 class _BroodstockMortalityViewScreenState
     extends State<BroodstockMortalityViewScreen> {
   List<dynamic> broodstockMortalityList = [];
-
+  List<dynamic> filteredMortalityList = [];
   String? _userId;
   bool? _isAdmin;
+  final TextEditingController _searchController = TextEditingController();
 
   @override
   void initState() {
     super.initState();
     getBroodstockMortalityList();
     getUserDetails();
+    _searchController.addListener(_filterMortalityList);
   }
 
-  //get user details
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
+
   Future<void> getUserDetails() async {
-    // var user = await ApiDepartment.getUserDetails();
     setState(() {
       _userId = "User 123";
       _isAdmin = true;
     });
   }
 
-  //Get all Broodstock Mortality Details
   Future<void> getBroodstockMortalityList() async {
     BroodstockMortalityService broodstockMortalityService =
         BroodstockMortalityService();
@@ -57,113 +62,38 @@ class _BroodstockMortalityViewScreenState
       var response = await broodstockMortalityService.getAllMortality();
       setState(() {
         broodstockMortalityList = response;
+        filteredMortalityList = response; // Initialize filtered list
       });
     } catch (error) {
-      showDialog(
-          context: context,
-          builder: (BuildContext context) {
-            return SimpleDialog(
-              title: const Text('Error'),
-              children: [
-                SimpleDialogOption(
-                  onPressed: () {
-                    Navigator.pop(context);
-                  },
-                  child: Text(error.toString()),
-                )
-              ],
-            );
-          });
+      _showErrorDialog(error.toString());
     }
   }
 
-  //confirmation dialog
-  void _showConfirmationDialog({required String purpose, int? index}) {
+  void _filterMortalityList() {
+    String query = _searchController.text.toLowerCase();
+    setState(() {
+      filteredMortalityList = broodstockMortalityList.where((item) {
+        final date = item['date']?.toLowerCase() ?? '';
+        final employeeCode = item['employee_code']?.toLowerCase() ?? '';
+        return date.contains(query) || employeeCode.contains(query);
+      }).toList();
+    });
+  }
+
+  void _showErrorDialog(String message) {
     showDialog(
       context: context,
-      builder: (BuildContext context) {
-        return AlertDialog(
-          title: Text('$purpose Confirmation'),
-          content: Text('Are you sure you want to $purpose the Data?'),
-          actions: <Widget>[
-            TextButton(
-              child: Text('$purpose'),
-              onPressed: () {
-                if (purpose == 'Delete') {
-                  _deleteMortality(index!);
-                }
-                Navigator.of(context).pop();
-              },
-            ),
-            TextButton(
-              child: const Text(
-                'Cancel',
-                style: TextStyle(color: Colors.red),
-              ),
-              onPressed: () {
-                Navigator.of(context).pop();
-              },
-            ),
-          ],
-        );
-      },
+      builder: (context) => AlertDialog(
+        title: const Text('Error'),
+        content: Text(message),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('Close'),
+          )
+        ],
+      ),
     );
-  }
-
-  //delete broodstock mortality
-  Future<void> _deleteMortality(int index) async {
-    final Map<String, dynamic> selectedMortality =
-        broodstockMortalityList[index];
-
-    int? mortalityId = selectedMortality['id'];
-
-    setState(() {
-      broodstockMortalityList.removeAt(index);
-    });
-
-    try {
-      BroodstockMortalityService broodstockMortalityService =
-          BroodstockMortalityService();
-
-      await broodstockMortalityService.deleteMortality(mortalityId!);
-      showDialog(
-          context: context,
-          builder: (BuildContext context) {
-            return SimpleDialog(
-              title: const Text('Deleted'),
-              children: [
-                SimpleDialogOption(
-                  onPressed: () {
-                    Navigator.pop(context); // Close the dialog
-                  },
-                  child: Text('Broodstock Mortality deleted successfully!'),
-                ),
-              ],
-            );
-          });
-
-      getBroodstockMortalityList();
-    } catch (error) {
-      showDialog(
-          context: context,
-          builder: (BuildContext context) {
-            return SimpleDialog(
-              title: const Text('Error'),
-              children: [
-                SimpleDialogOption(
-                  onPressed: () {
-                    Navigator.pop(context);
-                  },
-                  child: Text(error.toString()),
-                )
-              ],
-            );
-          });
-
-      setState(() {
-        broodstockMortalityList.insert(index, selectedMortality);
-      });
-    }
   }
 
   @override
@@ -171,153 +101,111 @@ class _BroodstockMortalityViewScreenState
     return Scaffold(
       appBar: AppBar(
         backgroundColor: Colors.blue,
-        leading: IconButton(
-          onPressed: () {
-            Navigator.of(context).pop();
-          },
-          icon: const Icon(
-            Icons.menu,
-            color: Colors.white,
-          ),
-        ),
-        title: const Text(
-          'Activity/Broodstock-Mortality View',
-          style: TextStyle(color: Colors.white),
-        ),
-        actions: const [
-          Padding(
-            padding: EdgeInsets.all(8.0),
-            child: Icon(
-              Icons.account_circle,
-              color: Colors.white,
-              size: 30,
-            ),
-          )
-        ],
+        title: const Text('Broodstock Mortality View'),
       ),
-      body: Padding(
-        padding: EdgeInsets.all(10.0),
-        child: SingleChildScrollView(
-          child: Column(
-            children: [
-              //User id Row
-              Row(mainAxisAlignment: MainAxisAlignment.center, children: [
-                Text('User Id : ${_userId}',
-                    style: TextStyle(fontWeight: FontWeight.bold)),
-              ]),
-              SizedBox(height: 10),
-
-              //Broodstock Mortality List
-              ListView.builder(
-                  shrinkWrap: true,
-                  physics: const NeverScrollableScrollPhysics(),
-                  itemCount: broodstockMortalityList.length,
-                  itemBuilder: (context, index) {
-                    final item = broodstockMortalityList[index];
-                    return Card(
-                      child: ListTile(
-                        onTap: () {
-                          // show Mortality details as a dialog
-                          showDialog(
-                            context: context,
-                            builder: (BuildContext context) {
-                              return AlertDialog(
-                                  title: Text('Date : ${item['date']}'),
-                                  content: SingleChildScrollView(
-                                    child: ListBody(
-                                      // Using ListBody for structured and scrollable content
-                                      children: [
-                                        Text(
-                                            'Employee Code : ${item['employee_code']}'),
-                                        const SizedBox(height: 5),
-                                        Text(
-                                          'Department : ${item['department']['department_name']}',
-                                        ),
-                                        const SizedBox(height: 5),
-                                        Text(
-                                            'Division : ${item['division']['division_name']}'),
-                                        const SizedBox(height: 5),
-                                        Text(
-                                            'Tank : ${item['tank']['tank_name']}'),
-                                        const SizedBox(height: 5),
-                                        Text(
-                                            'Male Prawns mortality count : ${item['male_prawn_count']}'),
-                                        const SizedBox(height: 5),
-                                        Text(
-                                            'Female Prawns mortality count : ${item['female_prawn_count']}'),
-                                        const SizedBox(height: 5),
-                                        Text('Notes : ${item['notes']}'),
-                                        const SizedBox(height: 5),
-                                      ],
-                                    ),
-                                  ));
-                            },
-                          );
-                        },
-                        title: Text('Date : ${item['date']}'),
-                        subtitle: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                                'Male mortality count : ${item['male_prawn_count']}'),
-                            Text(
-                                'Female mortality count : ${item['female_prawn_count']}'),
-                          ],
-                        ),
-                        trailing:
-                            Row(mainAxisSize: MainAxisSize.min, children: [
-                          IconButton(
-                            icon: const Icon(Icons.edit),
-                            onPressed: () {
-                              final departmentData = item['department'];
-                              final Department department =
-                                  Department.fromJson(departmentData);
-
-                              final divisionData = item['division'];
-                              final DivisionModel division =
-                                  DivisionModel.fromJson(divisionData);
-
-                              final tankData = item['tank'];
-                              final TankModel tank =
-                                  TankModel.fromJson(tankData);
-
-                              final Map<String, dynamic> updatingData = {
-                                'id': item['id'],
-                                'date': item['date'],
-                                'divisionId': division.id,
-                                // 'departmentId': department.id,
-                                'tankId': tank.id,
-                                'malePrawn': item['male_prawn_count'],
-                                'femalePrawn': item['female_prawn_count'],
-                                'notes': item['notes']
-                              };
-
-                              Navigator.of(context).push(MaterialPageRoute(
-                                builder: (context) {
-                                  return BroodstockMortalityActivityScreen(
-                                    broodstockMortalityData: updatingData,
-                                    isEditing: true,
-                                  );
-                                },
-                              ));
-                            },
-                          ),
-                          _isAdmin!
-                              ? IconButton(
-                                  onPressed: () {
-                                    _showConfirmationDialog(
-                                        purpose: "Delete", index: index);
-                                  },
-                                  icon: const Icon(Icons.delete))
-                              : const SizedBox(width: 0)
-                        ]),
-                      ),
-                    );
-                  })
-            ],
+      body: Column(
+        children: [
+          const SizedBox(height: 20),
+          // Search Bar
+          SizedBox(
+            width: 200,
+            child: TextField(
+              controller: _searchController,
+              decoration: const InputDecoration(
+                labelText: 'Search',
+                prefixIcon: Icon(Icons.search),
+                border: OutlineInputBorder(),
+              ),
+            ),
           ),
-        ),
+          const SizedBox(height: 20),
+          // Data Table
+          broodstockMortalityList.isEmpty
+              ? const Center(child: Text('No Data Available'))
+              : Center(
+                  child: SizedBox(
+                    width: 1500,
+                    child: PaginatedDataTable(
+                      header: Text('User ID: $_userId'),
+                      columns: const [
+                        DataColumn(label: Text('Date')),
+                        DataColumn(label: Text('Employee Code')),
+                        DataColumn(label: Text('Department')),
+                        DataColumn(label: Text('Division')),
+                        DataColumn(label: Text('Tank')),
+                        DataColumn(label: Text('Male Count')),
+                        DataColumn(label: Text('Female Count')),
+                        DataColumn(label: Text('Actions')),
+                      ],
+                      source: _BroodstockMortalityDataSource(
+                        context: context,
+                        mortalityList: filteredMortalityList,
+                        isAdmin: _isAdmin ?? false,
+                        deleteMortality: _deleteMortality,
+                      ),
+                      rowsPerPage: 5,
+                    ),
+                  ),
+                ),
+        ],
       ),
     );
   }
+
+  Future<void> _deleteMortality(int index) async {
+    // Add delete logic here
+  }
+}
+
+class _BroodstockMortalityDataSource extends DataTableSource {
+  final BuildContext context;
+  final List<dynamic> mortalityList;
+  final bool isAdmin;
+  final Function(int) deleteMortality;
+
+  _BroodstockMortalityDataSource({
+    required this.context,
+    required this.mortalityList,
+    required this.isAdmin,
+    required this.deleteMortality,
+  });
+
+  @override
+  DataRow getRow(int index) {
+    if (index >= mortalityList.length) return const DataRow(cells: []);
+    final item = mortalityList[index];
+    return DataRow(cells: [
+      DataCell(Text(item['date'] ?? '')),
+      DataCell(Text(item['employee_code'] ?? '')),
+      DataCell(Text(item['department']['department_name'] ?? '')),
+      DataCell(Text(item['division']['division_name'] ?? '')),
+      DataCell(Text(item['tank']['tank_name'] ?? '')),
+      DataCell(Text('${item['male_prawn_count']}')),
+      DataCell(Text('${item['female_prawn_count']}')),
+      DataCell(Row(
+        children: [
+          IconButton(
+            icon: const Icon(Icons.edit),
+            onPressed: () {
+              // Handle edit action
+            },
+          ),
+          if (isAdmin)
+            IconButton(
+              icon: const Icon(Icons.delete),
+              onPressed: () => deleteMortality(index),
+            ),
+        ],
+      )),
+    ]);
+  }
+
+  @override
+  bool get isRowCountApproximate => false;
+
+  @override
+  int get rowCount => mortalityList.length;
+
+  @override
+  int get selectedRowCount => 0;
 }

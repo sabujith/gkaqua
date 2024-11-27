@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:gk_aqua/models/department.dart';
-import 'package:gk_aqua/models/employee.dart';
+// import 'package:gk_aqua/models/employee.dart';
 import 'package:gk_aqua/screens/masters/employeeAddMasterScreen.dart';
 import 'package:gk_aqua/services/employee_services.dart';
 
@@ -24,19 +24,20 @@ class EmployeeViewMasterScreen extends StatefulWidget {
 }
 
 class _EmployeeViewMasterScreenState extends State<EmployeeViewMasterScreen> {
-  List<dynamic> EmployeesDet = [];
+  List<dynamic> employeesDet = [];
+  List<dynamic> filteredEmployees = [];
   String? _userId;
   bool? _isAdmin;
+  final TextEditingController _searchController = TextEditingController();
 
   @override
   void initState() {
-    // TODO: implement initState
     super.initState();
     _fetchEmployees();
     _getUserDetails();
+    _searchController.addListener(_filterEmployees);
   }
 
-  //Get user Details
   Future<void> _getUserDetails() async {
     setState(() {
       _userId = "User 123";
@@ -44,103 +45,30 @@ class _EmployeeViewMasterScreenState extends State<EmployeeViewMasterScreen> {
     });
   }
 
-  //get all employees details
   Future<void> _fetchEmployees() async {
     EmployeeServices employeeServices = EmployeeServices();
     try {
       List<dynamic> employees = await employeeServices.fetchEmployees();
       setState(() {
-        EmployeesDet = employees;
+        employeesDet = employees;
+        filteredEmployees = employees; // Initialize filtered list
       });
     } catch (e) {
-      showDialog(
-        context: context,
-        builder: (BuildContext context) {
-          return SimpleDialog(
-            title: const Text('Error'),
-            children: <Widget>[
-              Text(e.toString()),
-            ],
-          );
-        },
-      );
+      _showErrorDialog(e.toString());
     }
   }
 
-  //delete employee
-  Future<void> _deleteEmployee(int index) async {
-    final Map<String, dynamic> selectedEmployee = EmployeesDet[index];
-    // print(selectedEmployee);
-    int? employeeId = selectedEmployee['id'];
-    setState(() {
-      EmployeesDet.removeAt(index);
-    });
-
-    try {
-      await EmployeeServices().deleteEmployee(employeeId!);
-
-      showDialog(
-          context: context,
-          builder: (BuildContext context) {
-            return SimpleDialog(
-              title: const Text('Success'),
-              children: [
-                SimpleDialogOption(
-                  onPressed: () {
-                    Navigator.pop(context); // Close the dialog
-                  },
-                  child: Text('Employee deleted successfully!'),
-                ),
-              ],
-            );
-          });
-
-      _fetchEmployees();
-    } catch (e) {
-      showDialog(
-        context: context,
-        builder: (BuildContext context) {
-          return SimpleDialog(
-            title: const Text('Error'),
-            children: <Widget>[
-              Text(e.toString()),
-            ],
-          );
-        },
-      );
-
-      setState(() {
-        EmployeesDet.insert(index, selectedEmployee);
-      });
-    }
-  }
-
-  //confirmation dialog
-  void _showConfirmationDialog({required String purpose, int? id}) {
+  void _showErrorDialog(String message) {
     showDialog(
       context: context,
       builder: (BuildContext context) {
         return AlertDialog(
-          title: Text('$purpose Confirmation'),
-          content: Text('Are you sure you want to $purpose the Data?'),
-          actions: <Widget>[
+          title: const Text('Error'),
+          content: Text(message),
+          actions: [
             TextButton(
-              child: Text('$purpose'),
-              onPressed: () {
-                if (purpose == 'Delete') {
-                  _deleteEmployee(id!);
-                }
-                Navigator.of(context).pop();
-              },
-            ),
-            TextButton(
-              child: const Text(
-                'Cancel',
-                style: TextStyle(color: Colors.red),
-              ),
-              onPressed: () {
-                Navigator.of(context).pop();
-              },
+              child: const Text('Close'),
+              onPressed: () => Navigator.of(context).pop(),
             ),
           ],
         );
@@ -148,133 +76,164 @@ class _EmployeeViewMasterScreenState extends State<EmployeeViewMasterScreen> {
     );
   }
 
+  void _filterEmployees() {
+    String query = _searchController.text.toLowerCase();
+    setState(() {
+      filteredEmployees = employeesDet
+          .where((employee) =>
+              employee['name'].toLowerCase().contains(query) ||
+              employee['employee_code'].toLowerCase().contains(query) ||
+              employee['department']['department_name']
+                  .toLowerCase()
+                  .contains(query))
+          .toList();
+    });
+  }
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
         backgroundColor: Colors.blue,
-        shadowColor: Colors.blue,
-        leading: BackButton(
-          color: Colors.white,
-          onPressed: () {
-            Navigator.of(context).pop();
-          },
-        ),
-        title: const Text(
-          'Master/Emp. View',
-          style: TextStyle(color: Colors.white),
-        ),
+        title: const Text('Employee View'),
       ),
-      body: Padding(
-        padding: EdgeInsets.all(10.0),
-        child: SingleChildScrollView(
-          child: Column(
-            children: [
-              Row(mainAxisAlignment: MainAxisAlignment.center, children: [
-                Text('User Id : ${_userId}',
-                    style: TextStyle(fontWeight: FontWeight.bold)),
-              ]),
-              SizedBox(height: 10),
-              ListView.builder(
-                shrinkWrap: true,
-                physics: const NeverScrollableScrollPhysics(),
-                itemCount: EmployeesDet.length,
-                itemBuilder: (context, index) {
-                  final employee = EmployeesDet[index];
-                  return Card(
-                    child: ListTile(
-                      onTap: () {
-                        // show employee details as a dialog
-                        showDialog(
-                          context: context,
-                          builder: (BuildContext context) {
-                            return AlertDialog(
-                                title: Text('Name : ${employee['name']}'),
-                                content: SingleChildScrollView(
-                                  child: ListBody(
-                                    // Using ListBody for structured and scrollable content
-                                    children: [
-                                      Text(
-                                          'Employee Id : ${employee['employee_code']}'),
-                                      SizedBox(height: 5),
-                                      Text(
-                                        'MyCAd/Passport No : ${employee['mycad_or_passport_no']}',
-                                      ),
-                                      SizedBox(height: 5),
-                                      Text(
-                                          'Department : ${employee['department']['department_name']}'),
-                                      SizedBox(height: 5),
-                                      Text('Mobile : ${employee['mobile']}'),
-                                      SizedBox(height: 5),
-                                      Text('Address : ${employee['address']}'),
-                                      SizedBox(height: 5),
-                                      Text(
-                                          'Blood Group : ${employee['blood_group']}'),
-                                    ],
-                                  ),
-                                ));
-                          },
-                        );
-                      },
-                      title: Text(employee['name']),
-                      subtitle: Text(employee['employee_code']),
-                      trailing: Row(mainAxisSize: MainAxisSize.min, children: [
-                        IconButton(
-                          icon: Icon(Icons.edit),
-                          onPressed: () {
-                            final departmentData = employee['department'];
-                            final Department department =
-                                Department.fromJson(departmentData);
-                            // edit functionality
-                            // _editEmployee(index);
-                            final Map<String, dynamic> updatingData = {
-                              'id': employee['id'],
-                              'employee_code': employee['employee_code'],
-                              'name': employee['name'],
-                              'document_type': employee['document_type'],
-                              'mycad_or_passport_no':
-                                  employee['mycad_or_passport_no'],
-                              'department': department.id,
-                              'mobile': employee['mobile'],
-                              'address': employee['address'],
-                              'blood_group': employee['blood_group'],
-                              'notes': employee['notes'],
-                              'start_date': employee['start_date'],
-                              'end_date': employee['end_date'],
-                            };
-                            // print(updatingData);
-                            Navigator.of(context).push(
-                              MaterialPageRoute(
-                                builder: (context) {
-                                  return EmployeeAdd(
-                                    employeeData:
-                                        updatingData, // Pass the employee data
-                                    isEditing: true, // Set editing mode
-                                  );
-                                },
-                              ),
-                            );
-                          },
-                        ),
-                        _isAdmin!
-                            ? IconButton(
-                                icon: Icon(Icons.delete),
-                                onPressed: () {
-                                  // delete functionality
-                                  _showConfirmationDialog(
-                                      purpose: "Delete", id: index);
-                                },
-                              )
-                            : SizedBox(width: 0)
-                      ]),
-                    ),
-                  );
-                },
-              )
-            ],
+      body: Column(
+        children: [
+          SizedBox(height: 20),
+          //search bar
+          SizedBox(
+            width: 200,
+            child: TextField(
+              controller: _searchController,
+              decoration: const InputDecoration(
+                labelText: 'Search',
+                prefixIcon: Icon(Icons.search),
+                border: OutlineInputBorder(),
+              ),
+            ),
           ),
-        ),
+          const SizedBox(height: 20),
+
+          //data table
+          employeesDet.length == 0
+              ? Center(child: Text('No Data'))
+              : Center(
+                  child: SizedBox(
+                    width: 1500,
+                    child: PaginatedDataTable(
+                      header: Center(child: Text('User ID: $_userId')),
+                      columns: const [
+                        DataColumn(label: Text('Name')),
+                        DataColumn(label: Text('Code')),
+                        DataColumn(label: Text('Department')),
+                        DataColumn(label: Text('Actions')),
+                      ],
+                      source: _EmployeeDataSource(
+                        context: context,
+                        employees: filteredEmployees,
+                        isAdmin: _isAdmin ?? false,
+                        deleteEmployee: _deleteEmployee,
+                      ),
+                      rowsPerPage: 5,
+                    ),
+                  ),
+                ),
+        ],
       ),
     );
   }
+
+  Future<void> _deleteEmployee(int index) async {
+    final employee = filteredEmployees[index];
+    int? employeeId = employee['id'];
+    setState(() {
+      employeesDet.remove(employee);
+      filteredEmployees.removeAt(index);
+    });
+
+    try {
+      await EmployeeServices().deleteEmployee(employeeId!);
+      _fetchEmployees();
+    } catch (e) {
+      _showErrorDialog(e.toString());
+    }
+  }
+}
+
+class _EmployeeDataSource extends DataTableSource {
+  final BuildContext context;
+  final List<dynamic> employees;
+  final bool isAdmin;
+  final Function(int) deleteEmployee;
+
+  _EmployeeDataSource({
+    required this.context,
+    required this.employees,
+    required this.isAdmin,
+    required this.deleteEmployee,
+  });
+
+  @override
+  DataRow getRow(int index) {
+    if (index >= employees.length) return const DataRow(cells: []);
+    final employee = employees[index];
+    return DataRow(cells: [
+      DataCell(Text(employee['name'])),
+      DataCell(Text(employee['employee_code'])),
+      DataCell(Text(employee['department']['department_name'])),
+      DataCell(Row(
+        children: [
+          IconButton(
+            icon: const Icon(Icons.edit),
+            onPressed: () {
+              final departmentData = employee['department'];
+              final Department department = Department.fromJson(departmentData);
+              final updatingData = {
+                'id': employee['id'],
+                'employee_code': employee['employee_code'],
+                'name': employee['name'],
+                'document_type': employee['document_type'],
+                'mycad_or_passport_no': employee['mycad_or_passport_no'],
+                'department': department.id,
+                'mobile': employee['mobile'],
+                'address': employee['address'],
+                'blood_group': employee['blood_group'],
+                'notes': employee['notes'],
+                'start_date': employee['start_date'],
+                'end_date': employee['end_date'],
+              };
+              Navigator.of(context).push(
+                MaterialPageRoute(
+                  builder: (context) => EmployeeAdd(
+                    employeeData: updatingData,
+                    isEditing: true,
+                  ),
+                ),
+              );
+            },
+          ),
+          if (isAdmin)
+            IconButton(
+              icon: const Icon(Icons.delete),
+              onPressed: () => deleteEmployee(index),
+            ),
+        ],
+      )),
+    ]);
+  }
+
+  @override
+  bool get isRowCountApproximate => false;
+
+  @override
+  int get rowCount => employees.length;
+
+  @override
+  int get selectedRowCount => 0;
 }

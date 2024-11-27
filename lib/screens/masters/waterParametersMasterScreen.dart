@@ -33,25 +33,65 @@ class _WaterparametersformState extends State<Waterparametersform> {
   final _startDateController = TextEditingController();
   final _endDateController = TextEditingController();
   final _noteController = TextEditingController();
+  final searchController = TextEditingController();
   bool _isadmin = true; //to check if the user is an admin or not
   bool _isEditing = false; //to check if the form is in edit mode or not
+  bool _isLoading = false;
   UnitModel? _selectedUnit;
   final List<UnitModel> _units = []; //to store units for dropdown
+
+  List<waterParameterModel> _filteredWaterparameters = [];
 
   @override
   void initState() {
     // TODO: implement initState
     super.initState();
     _fetchWaterparameters();
-    _getUserDetails();
-    _getUnits(context);
+  }
+
+  void _fetchData() async {
+    setState(() {
+      _isLoading = true;
+    });
+    await _fetchWaterparameters();
+    await _getUnits(context);
+    await _getUserDetails();
+    setState(() {
+      _isLoading = false;
+      _filteredWaterparameters = _waterparameters;
+      searchController.addListener(_onSearchChanged);
+    });
+  }
+
+  void _onSearchChanged() {
+    filteredWaterparameters(searchController.text);
+  }
+
+  void filteredWaterparameters(String query) {
+    final filtered = _waterparameters.where((waterParameter) {
+      return waterParameter.parameter_name!
+              .toLowerCase()
+              .contains(query.toLowerCase()) ||
+          waterParameter.parameter_code!
+              .toLowerCase()
+              .contains(query.toLowerCase()) ||
+          waterParameter.start_date!
+              .toLowerCase()
+              .contains(query.toLowerCase()) ||
+          waterParameter.end_date!.toLowerCase().contains(query.toLowerCase());
+    }).toList();
+
+    setState(() {
+      _filteredWaterparameters = filtered;
+    });
   }
 
   //get User Details
-  void _getUserDetails() async {
+  Future<void> _getUserDetails() async {
     setState(() {
       _userId = 'user123';
       _isadmin = true;
+      searchController.addListener(_onSearchChanged);
     });
   }
 
@@ -72,20 +112,24 @@ class _WaterparametersformState extends State<Waterparametersform> {
       List<waterParameterModel> fetchedWaterparameters =
           await waterparameterServices.fetchWaterParameters();
 
-      setState(() {
-        _waterparameters = fetchedWaterparameters;
-      });
+      if (mounted) {
+        setState(() {
+          _waterparameters = fetchedWaterparameters;
+        });
+      }
     } catch (e) {
-      showDialog(
-          context: context,
-          builder: (BuildContext context) {
-            return SimpleDialog(
-              title: const Text('Error'),
-              children: <Widget>[
-                Text(e.toString()),
-              ],
-            );
-          });
+      if (mounted) {
+        showDialog(
+            context: context,
+            builder: (BuildContext context) {
+              return SimpleDialog(
+                title: const Text('Error'),
+                children: <Widget>[
+                  Text(e.toString()),
+                ],
+              );
+            });
+      }
     }
   }
 
@@ -203,7 +247,7 @@ class _WaterparametersformState extends State<Waterparametersform> {
   }
 
 //to update form
-  Future<void> _updateForm() async {
+  Future<void> _updateForm(waterParameterModel waterparameter) async {
     if (_formKey.currentState!.validate()) {
       String waterparameter = _parameterController.text;
       String parameterCode = _parameterCodeController.text;
@@ -320,21 +364,25 @@ class _WaterparametersformState extends State<Waterparametersform> {
 
     try {
       List<UnitModel> units = await unitService.fetchUnits();
-      setState(() {
-        _units.addAll(units);
-      });
+      if (mounted) {
+        setState(() {
+          _units.addAll(units);
+        });
+      }
     } catch (e) {
-      showDialog(
-        context: context,
-        builder: (BuildContext context) {
-          return SimpleDialog(
-            title: const Text('Error'),
-            children: <Widget>[
-              Text(e.toString()),
-            ],
-          );
-        },
-      );
+      if (mounted) {
+        showDialog(
+          context: context,
+          builder: (BuildContext context) {
+            return SimpleDialog(
+              title: const Text('Error'),
+              children: <Widget>[
+                Text(e.toString()),
+              ],
+            );
+          },
+        );
+      }
     }
   }
 
@@ -372,7 +420,7 @@ class _WaterparametersformState extends State<Waterparametersform> {
                 if (purpose == 'Submit') {
                   _submitForm();
                 } else if (purpose == 'Update') {
-                  _updateForm();
+                  _updateForm(_selectedWaterparameter!);
                 } else if (purpose == 'Delete') {
                   _deleteWaterParameter(id!);
                 }
@@ -586,67 +634,43 @@ class _WaterparametersformState extends State<Waterparametersform> {
                       ),
                     ),
               SizedBox(height: 10),
-              ListView.builder(
-                shrinkWrap: true,
-                physics: const NeverScrollableScrollPhysics(),
-                itemCount: _waterparameters.length,
-                itemBuilder: (context, index) {
-                  final waterParameter = _waterparameters[index];
-                  return Card(
-                    child: ListTile(
-                      onTap: () {
-                        // print(waterParameter.unit.unit_name);
-                        showDialog(
-                            context: context,
-                            builder: (BuildContext context) {
-                              return AlertDialog(
-                                title: Text(
-                                    'Parameter Name : ${waterParameter.parameter_name}'),
-                                content: SingleChildScrollView(
-                                  child: ListBody(
-                                    children: [
-                                      Text(
-                                          'Parameter Code : ${waterParameter.parameter_code}'),
-                                      SizedBox(height: 5),
-                                      Text('Notes : ${waterParameter.notes}'),
-                                      SizedBox(height: 5),
-                                      Text(
-                                          'Start Date : ${waterParameter.start_date}'),
-                                      SizedBox(height: 5),
-                                      Text(
-                                          'End Date: ${waterParameter.end_date}'),
-                                      SizedBox(height: 5),
-                                    ],
-                                  ),
-                                ),
-                              );
-                            });
-                      },
-                      title: Text(waterParameter.parameter_name!),
-                      subtitle: Text(waterParameter.parameter_code!),
-                      trailing: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          IconButton(
-                            icon: Icon(Icons.edit),
-                            onPressed: () {
-                              _editWaterparameter(waterParameter);
-                            },
-                          ),
-                          _isadmin
-                              ? IconButton(
-                                  icon: Icon(Icons.delete),
-                                  onPressed: () {
-                                    _showConfirmationDialog(
-                                        purpose: 'Delete', id: index);
-                                  })
-                              : SizedBox(width: 0)
-                        ],
-                      ),
-                    ),
-                  );
-                },
-              )
+              //Search Bar
+              SizedBox(
+                width: 200,
+                child: TextField(
+                  controller: searchController,
+                  decoration: const InputDecoration(
+                    labelText: 'Search',
+                    prefixIcon: Icon(Icons.search),
+                    border: OutlineInputBorder(),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 10),
+
+              //DataTable
+              SizedBox(
+                width: 1500,
+                child: PaginatedDataTable(
+                  columns: const [
+                    DataColumn(label: Text('Water Parameter')),
+                    DataColumn(label: Text('Water Parameter Code')),
+                    DataColumn(label: Text('Start Date')),
+                    DataColumn(label: Text('End Date')),
+                    DataColumn(label: Text('Actions')),
+                  ],
+                  source: WaterParameterDataSource(
+                    _waterparameters,
+                    waterparameters: _waterparameters,
+                    isAdmin: _isadmin,
+                    onEdit: _updateForm,
+                    onDelete: (index) {
+                      _showConfirmationDialog(purpose: 'Delete', id: index);
+                    },
+                  ),
+                  rowsPerPage: 3,
+                ),
+              ),
             ],
           ),
         ),
@@ -866,71 +890,103 @@ class _WaterparametersformState extends State<Waterparametersform> {
                         ],
                       ),
                 SizedBox(height: 10),
-                ListView.builder(
-                  shrinkWrap: true,
-                  physics: const NeverScrollableScrollPhysics(),
-                  itemCount: _waterparameters.length,
-                  itemBuilder: (context, index) {
-                    final waterParameter = _waterparameters[index];
-                    return Card(
-                      child: ListTile(
-                        onTap: () {
-                          // print(waterParameter.unit.unit_name);
-                          showDialog(
-                              context: context,
-                              builder: (BuildContext context) {
-                                return AlertDialog(
-                                  title: Text(
-                                      'Parameter Name : ${waterParameter.parameter_name}'),
-                                  content: SingleChildScrollView(
-                                    child: ListBody(
-                                      children: [
-                                        Text(
-                                            'Parameter Code : ${waterParameter.parameter_code}'),
-                                        SizedBox(height: 5),
-                                        Text('Notes : ${waterParameter.notes}'),
-                                        SizedBox(height: 5),
-                                        Text(
-                                            'Start Date : ${waterParameter.start_date}'),
-                                        SizedBox(height: 5),
-                                        Text(
-                                            'End Date: ${waterParameter.end_date}'),
-                                        SizedBox(height: 5),
-                                      ],
-                                    ),
-                                  ),
-                                );
-                              });
-                        },
-                        title: Text(waterParameter.parameter_name!),
-                        subtitle: Text(waterParameter.parameter_code!),
-                        trailing: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            IconButton(
-                              icon: Icon(Icons.edit),
-                              onPressed: () {
-                                _editWaterparameter(waterParameter);
-                              },
-                            ),
-                            _isadmin
-                                ? IconButton(
-                                    icon: Icon(Icons.delete),
-                                    onPressed: () {
-                                      _showConfirmationDialog(
-                                          purpose: "Delete", id: index);
-                                    },
-                                  )
-                                : const SizedBox(width: 0)
-                          ],
-                        ),
-                      ),
-                    );
-                  },
-                )
+
+                //Search Bar
+                SizedBox(
+                  width: 200,
+                  child: TextField(
+                    controller: searchController,
+                    decoration: const InputDecoration(
+                      labelText: 'Search',
+                      prefixIcon: Icon(Icons.search),
+                      border: OutlineInputBorder(),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 10),
+
+                //DataTable
+                SizedBox(
+                  width: 1500,
+                  child: PaginatedDataTable(
+                    columns: const [
+                      DataColumn(label: Text('Water Parameter')),
+                      DataColumn(label: Text('Water Parameter Code')),
+                      DataColumn(label: Text('Start Date')),
+                      DataColumn(label: Text('End Date')),
+                      DataColumn(label: Text('Actions')),
+                    ],
+                    source: WaterParameterDataSource(
+                      _waterparameters,
+                      waterparameters: _waterparameters,
+                      isAdmin: _isadmin,
+                      onEdit: _updateForm,
+                      onDelete: (index) {
+                        _showConfirmationDialog(purpose: 'Delete', id: index);
+                      },
+                    ),
+                    rowsPerPage: 3,
+                  ),
+                ),
               ],
             )),
       ),
     );
   }
+}
+
+class WaterParameterDataSource extends DataTableSource {
+  final List<waterParameterModel> _waterparameters;
+  final bool isAdmin;
+  final void Function(waterParameterModel) onEdit;
+  final void Function(int) onDelete;
+
+  WaterParameterDataSource(
+    this._waterparameters, {
+    required List<waterParameterModel> waterparameters,
+    required this.isAdmin,
+    required this.onEdit,
+    required this.onDelete,
+  });
+
+  @override
+  DataRow? getRow(int index) {
+    final waterParameter = _waterparameters[index];
+    return DataRow(
+      cells: [
+        DataCell(Text(waterParameter.parameter_name!)),
+        DataCell(Text(waterParameter.parameter_code!)),
+        DataCell(Text(waterParameter.start_date ?? '')),
+        DataCell(Text(waterParameter.end_date ?? '')),
+        DataCell(
+          Row(
+            children: [
+              IconButton(
+                  onPressed: () {
+                    onEdit(waterParameter);
+                  },
+                  icon: Icon(Icons.edit)),
+              isAdmin
+                  ? IconButton(
+                      icon: const Icon(Icons.delete),
+                      onPressed: () {
+                        onDelete(index);
+                      },
+                    )
+                  : const SizedBox(width: 0),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  @override
+  bool get isRowCountApproximate => false;
+
+  @override
+  int get rowCount => _waterparameters.length;
+
+  @override
+  int get selectedRowCount => 0;
 }

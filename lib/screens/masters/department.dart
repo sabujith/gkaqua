@@ -54,26 +54,30 @@ class _DepartmentFormState extends State<DepartmentForm> {
           await departmentService.fetchDepartments();
 
       // Update the state with the fetched departments
-      setState(() {
-        departments = fetchedDepartments;
-      });
+      if (mounted) {
+        setState(() {
+          departments = fetchedDepartments;
+        });
+      }
     } catch (e) {
-      showDialog(
-        context: context,
-        builder: (BuildContext context) {
-          return SimpleDialog(
-            title: const Text('Error'),
-            children: [
-              SimpleDialogOption(
-                onPressed: () {
-                  Navigator.pop(context); // Close the dialog
-                },
-                child: Text('Error fetching departments: $e'),
-              ),
-            ],
-          );
-        },
-      );
+      if (mounted) {
+        showDialog(
+          context: context,
+          builder: (BuildContext context) {
+            return SimpleDialog(
+              title: const Text('Error'),
+              children: [
+                SimpleDialogOption(
+                  onPressed: () {
+                    Navigator.pop(context); // Close the dialog
+                  },
+                  child: Text('Error fetching departments: $e'),
+                ),
+              ],
+            );
+          },
+        );
+      }
     }
   }
 

@@ -28,26 +28,61 @@ class _unitMasterScreenState extends State<unitMasterScreen> {
   final _startDateController = TextEditingController();
   final _noteController = TextEditingController();
   final _endDateController = TextEditingController();
+  final searchController = TextEditingController();
   final _isadmin = false;
   bool _isEditing = false;
+  bool _isLoading = false;
 
   UnitModel? selectedUnit;
 
   Map<String, String>? editingUnit;
   List<UnitModel> unitList = [];
+  List<UnitModel> filteredUnits = [];
 
   @override
   void initState() {
     // TODO: implement initState
     super.initState();
-    _getUserDetails();
-    _fetchUnits();
+    _fetchData();
   }
 
-  void _getUserDetails() async {
+  void _fetchData() async {
+    setState(() {
+      _isLoading = true;
+    });
+    await _fetchUnits();
+    await _getUserDetails();
+    setState(() {
+      _isLoading = false;
+    });
+  }
+
+  Future<void> _getUserDetails() async {
     // final userId = await getUserId();
     setState(() {
       _userId = "User 123";
+      filteredUnits = unitList;
+      searchController.addListener(_onSearchChanged);
+    });
+  }
+
+  void _onSearchChanged() {
+    _filteredUnits(searchController.text);
+  }
+
+  void _filteredUnits(String query) {
+    final filtered = unitList.where((unit) {
+      // print(
+      //     'unit Name: ${unit.unit_name}, Unit Code: ${unit.unit_code}, Notes: ${unit.notes}, Start Date: ${unit.start_date}, End Date: ${unit.end_date}');
+      return unit.unit_name.toLowerCase().contains(query.toLowerCase()) ||
+          unit.unit_code.toLowerCase().contains(query.toLowerCase()) ||
+          // unit.notes!.toLowerCase()!.contains(query.toLowerCase()) ||
+          unit.start_date!.toLowerCase().contains(query.toLowerCase()) ||
+          unit.end_date!.toLowerCase().contains(query.toLowerCase());
+    }).toList();
+
+    setState(() {
+      filteredUnits = filtered;
     });
   }
 
@@ -56,7 +91,6 @@ class _unitMasterScreenState extends State<unitMasterScreen> {
 
     try {
       List<UnitModel> fetchedUnits = await unitService.fetchUnits();
-      print(fetchedUnits);
 
       setState(() {
         unitList = fetchedUnits;
@@ -397,6 +431,237 @@ class _unitMasterScreenState extends State<unitMasterScreen> {
     );
   }
 
+  Widget _desktopView() {
+    return SingleChildScrollView(
+      child: Padding(
+        padding: const EdgeInsets.all(15.0),
+        child: Form(
+          key: _formKey,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              //user id row
+              Row(
+                mainAxisAlignment: MainAxisAlignment.start,
+                children: [
+                  Text('User Id : ${_userId}',
+                      style: TextStyle(fontWeight: FontWeight.bold)),
+                ],
+              ),
+              SizedBox(height: 10),
+
+              //Unit Code, Unit Name, Notes Row
+              Row(
+                children: [
+                  //Unit Code
+                  Expanded(
+                    child: TextFormField(
+                      controller: _unitCodeController,
+                      validator: (value) {
+                        if (value == null || value.isEmpty) {
+                          return 'Please enter Unit Code';
+                        }
+                        return null;
+                      },
+                      decoration: const InputDecoration(
+                        labelText: 'Unit Code',
+                        border: OutlineInputBorder(),
+                      ),
+                    ),
+                  ),
+                  SizedBox(width: 5),
+                  //Unit Name
+                  Expanded(
+                    child: TextFormField(
+                      controller: _unitController,
+                      validator: (value) {
+                        if (value == null || value.isEmpty) {
+                          return 'Please enter Unit Name';
+                        }
+                        return null;
+                      },
+                      decoration: const InputDecoration(
+                        labelText: 'Unit Name',
+                        border: OutlineInputBorder(),
+                      ),
+                    ),
+                  ),
+                  SizedBox(width: 5),
+                  //Notes
+                  Expanded(
+                    child: TextField(
+                      controller: _noteController,
+                      maxLines: null,
+                      decoration: const InputDecoration(
+                        labelText: 'Notes',
+                        border: OutlineInputBorder(),
+                        constraints: BoxConstraints(minHeight: 50),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              SizedBox(height: 10),
+
+              //Start Date, End Date Row
+              Row(
+                children: [
+                  Expanded(
+                    child: TextFormField(
+                      controller: _startDateController,
+                      readOnly:
+                          true, // Make it read-only to prevent keyboard opening
+                      onTap: () => _selectDate(context, _startDateController),
+                      validator: (value) {
+                        if (value == null || value.isEmpty) {
+                          return 'Please Select Start Date';
+                        }
+                        return null;
+                      },
+                      decoration: const InputDecoration(
+                          labelText: 'Start Date',
+                          border: OutlineInputBorder(),
+                          suffixIcon: Icon(Icons.calendar_month)),
+                    ),
+                  ),
+                  const SizedBox(
+                    width: 5,
+                  ),
+                  Expanded(
+                    child: MouseRegion(
+                      cursor: SystemMouseCursors.click,
+                      child: TextFormField(
+                        controller: _endDateController,
+                        readOnly:
+                            true, // Make it read-only to prevent keyboard opening
+                        onTap: () => _selectDate(context, _endDateController),
+                        validator: (value) {
+                          if (value == null || value.isEmpty) {
+                            return 'Please Select end Date';
+                          }
+                          return null;
+                        },
+                        decoration: const InputDecoration(
+                            labelText: 'End Date',
+                            border: OutlineInputBorder(),
+                            suffixIcon: Icon(Icons.calendar_month)),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              SizedBox(height: 10),
+
+              _isEditing
+                  ? Row(
+                      mainAxisAlignment: MainAxisAlignment.end,
+                      children: [
+                        ElevatedButton(
+                          style: ElevatedButton.styleFrom(
+                            minimumSize: const Size(200, 50),
+                            backgroundColor: Colors.blue,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(5.0),
+                            ),
+                          ),
+                          onPressed: () {
+                            _showConfirmationDialog(purpose: "Update");
+                          },
+                          child: Text("Update",
+                              style: TextStyle(color: Colors.white)),
+                        ),
+                        SizedBox(width: 10),
+                        ElevatedButton(
+                          style: ElevatedButton.styleFrom(
+                            minimumSize: const Size(200, 50),
+                            backgroundColor: Colors.red,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(5.0),
+                            ),
+                          ),
+                          onPressed: () {
+                            _cancelEdit();
+                          },
+                          child: Text("Cancel",
+                              style: TextStyle(color: Colors.white)),
+                        ),
+                      ],
+                    )
+                  : Row(
+                      mainAxisAlignment: MainAxisAlignment.end,
+                      children: [
+                        ElevatedButton(
+                          style: ElevatedButton.styleFrom(
+                            minimumSize: const Size(200, 50),
+                            backgroundColor: Colors.blue,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(5.0),
+                            ),
+                          ),
+                          onPressed: () {
+                            if (_formKey.currentState!.validate()) {
+                              _showConfirmationDialog(purpose: "Submit");
+                            }
+                          },
+                          child: const Text(
+                            'Save',
+                            style: TextStyle(color: Colors.white),
+                          ),
+                        ),
+                      ],
+                    ),
+              SizedBox(height: 10),
+
+              //Search Bar
+              SizedBox(
+                width: 200,
+                child: TextField(
+                  controller: searchController,
+                  decoration: const InputDecoration(
+                    labelText: 'Search',
+                    prefixIcon: Icon(Icons.search),
+                    border: OutlineInputBorder(),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 10),
+
+              unitList.length == 0
+                  ? Center(child: Text("No Unit Data Available"))
+                  : //Data Table
+                  SizedBox(
+                      width: 1500,
+                      child: PaginatedDataTable(
+                        header: Center(
+                          child: Text('Units List'),
+                        ),
+                        columns: const [
+                          DataColumn(label: Text('Unit Name')),
+                          DataColumn(label: Text('Unit Code')),
+                          DataColumn(label: Text('Notes')),
+                          DataColumn(label: Text('Start Date')),
+                          DataColumn(label: Text('End Date')),
+                          DataColumn(label: Text('Actions')),
+                        ],
+                        source: UnitDataSource(
+                          units: filteredUnits,
+                          isadmin: _isadmin ?? false,
+                          onEdit: _editUnit,
+                          onDelete: (index) {
+                            _showConfirmationDialog(
+                                purpose: "Delete", id: index);
+                          },
+                        ),
+                        rowsPerPage: 3,
+                      ),
+                    ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
   Widget _mobileView() {
     return SingleChildScrollView(
       child: Padding(
@@ -555,318 +820,109 @@ class _unitMasterScreenState extends State<unitMasterScreen> {
                     ),
 
               SizedBox(height: 10),
-              ListView.builder(
-                shrinkWrap: true,
-                physics: const NeverScrollableScrollPhysics(),
-                itemCount: unitList.length,
-                itemBuilder: (context, index) {
-                  return Card(
-                    child: ListTile(
-                        onTap: () {
-                          showDialog(
-                              context: context,
-                              builder: (BuildContext context) {
-                                return AlertDialog(
-                                  title: Text(
-                                      'Unit Name : ${unitList[index].unit_name}'),
-                                  content: SingleChildScrollView(
-                                    child: ListBody(
-                                      children: [
-                                        Text(
-                                            'Unit Code : ${unitList[index].unit_code}'),
-                                        SizedBox(height: 5),
-                                        Text(
-                                            'Notes : ${unitList[index].notes}'),
-                                        SizedBox(height: 5),
-                                        Text(
-                                            'Start Date : ${unitList[index].start_date}'),
-                                        SizedBox(height: 5),
-                                        Text(
-                                            'End Date: ${unitList[index].end_date}'),
-                                        SizedBox(height: 5),
-                                      ],
-                                    ),
-                                  ),
-                                );
-                              });
-                        },
-                        title: Text(unitList[index].unit_name),
-                        subtitle: Text(unitList[index].unit_code),
-                        trailing: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            IconButton(
-                              onPressed: () {
-                                _editUnit(unitList[index]);
-                              },
-                              icon: Icon(Icons.edit),
-                            ),
-                            _isadmin
-                                ? IconButton(
-                                    icon: const Icon(Icons.delete),
-                                    onPressed: () {
-                                      _showConfirmationDialog(
-                                          purpose: "Delete", id: index);
-                                    },
-                                  )
-                                : SizedBox(width: 0),
-                          ],
-                        )),
-                  );
-                },
-              )
-              // SingleChildScrollView(child: _buildDataTable())
+              //Search Bar
+              SizedBox(
+                width: 200,
+                child: TextField(
+                  controller: searchController,
+                  decoration: const InputDecoration(
+                    labelText: 'Search',
+                    prefixIcon: Icon(Icons.search),
+                    border: OutlineInputBorder(),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 10),
+
+              unitList.length == 0
+                  ? Center(child: Text("No Unit Data Available"))
+                  : //Data Table
+                  SizedBox(
+                      width: 1500,
+                      child: PaginatedDataTable(
+                        header: Center(
+                          child: Text('Units List'),
+                        ),
+                        columns: const [
+                          DataColumn(label: Text('Unit Name')),
+                          DataColumn(label: Text('Unit Code')),
+                          DataColumn(label: Text('Notes')),
+                          DataColumn(label: Text('Start Date')),
+                          DataColumn(label: Text('End Date')),
+                          DataColumn(label: Text('Actions')),
+                        ],
+                        source: UnitDataSource(
+                          units: filteredUnits,
+                          isadmin: _isadmin ?? false,
+                          onEdit: _editUnit,
+                          onDelete: (index) {
+                            _showConfirmationDialog(
+                                purpose: "Delete", id: index);
+                          },
+                        ),
+                        rowsPerPage: 3,
+                      ),
+                    ), // SingleChildScrollView(child: _buildDataTable())
             ],
           ),
         ),
       ),
     );
   }
+}
 
-  Widget _desktopView() {
-    return SingleChildScrollView(
-      child: Padding(
-        padding: const EdgeInsets.all(15.0),
-        child: Form(
-          key: _formKey,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              //user id row
-              Row(
-                mainAxisAlignment: MainAxisAlignment.start,
-                children: [
-                  Text('User Id : ${_userId}',
-                      style: TextStyle(fontWeight: FontWeight.bold)),
-                ],
-              ),
-              SizedBox(height: 10),
+class UnitDataSource extends DataTableSource {
+  final List<UnitModel> units;
+  final bool isadmin;
+  final void Function(UnitModel) onEdit;
+  final void Function(int) onDelete;
 
-              //Unit Code, Unit Name, Notes Row
-              Row(
-                children: [
-                  //Unit Code
-                  Expanded(
-                    child: TextFormField(
-                      controller: _unitCodeController,
-                      validator: (value) {
-                        if (value == null || value.isEmpty) {
-                          return 'Please enter Unit Code';
-                        }
-                        return null;
-                      },
-                      decoration: const InputDecoration(
-                        labelText: 'Unit Code',
-                        border: OutlineInputBorder(),
-                      ),
-                    ),
-                  ),
-                  SizedBox(width: 5),
-                  //Unit Name
-                  Expanded(
-                    child: TextFormField(
-                      controller: _unitController,
-                      validator: (value) {
-                        if (value == null || value.isEmpty) {
-                          return 'Please enter Unit Name';
-                        }
-                        return null;
-                      },
-                      decoration: const InputDecoration(
-                        labelText: 'Unit Name',
-                        border: OutlineInputBorder(),
-                      ),
-                    ),
-                  ),
-                  SizedBox(width: 5),
-                  //Notes
-                  Expanded(
-                    child: TextField(
-                      controller: _noteController,
-                      maxLines: null,
-                      decoration: InputDecoration(
-                        labelText: 'Notes',
-                        border: OutlineInputBorder(),
-                        constraints: BoxConstraints(minHeight: 50),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-              SizedBox(height: 10),
+  UnitDataSource({
+    required this.units,
+    required this.isadmin,
+    required this.onEdit,
+    required this.onDelete,
+  });
 
-              //Start Date, End Date Row
-              Row(
-                children: [
-                  Expanded(
-                    child: TextFormField(
-                      controller: _startDateController,
-                      readOnly:
-                          true, // Make it read-only to prevent keyboard opening
-                      onTap: () => _selectDate(context, _startDateController),
-                      validator: (value) {
-                        if (value == null || value.isEmpty) {
-                          return 'Please Select Start Date';
-                        }
-                        return null;
-                      },
-                      decoration: const InputDecoration(
-                          labelText: 'Start Date',
-                          border: OutlineInputBorder(),
-                          suffixIcon: Icon(Icons.calendar_month)),
-                    ),
-                  ),
-                  const SizedBox(
-                    width: 5,
-                  ),
-                  Expanded(
-                    child: MouseRegion(
-                      cursor: SystemMouseCursors.click,
-                      child: TextFormField(
-                        controller: _endDateController,
-                        readOnly:
-                            true, // Make it read-only to prevent keyboard opening
-                        onTap: () => _selectDate(context, _endDateController),
-                        validator: (value) {
-                          if (value == null || value.isEmpty) {
-                            return 'Please Select end Date';
-                          }
-                          return null;
-                        },
-                        decoration: const InputDecoration(
-                            labelText: 'End Date',
-                            border: OutlineInputBorder(),
-                            suffixIcon: Icon(Icons.calendar_month)),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-              SizedBox(height: 10),
+  @override
+  DataRow? getRow(int index) {
+    final unit = units[index];
+    // print("Unit: $unit");
 
-              _isEditing
-                  ? Row(
-                      mainAxisAlignment: MainAxisAlignment.end,
-                      children: [
-                        ElevatedButton(
-                          style: ElevatedButton.styleFrom(
-                            minimumSize: const Size(200, 50),
-                            backgroundColor: Colors.blue,
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(5.0),
-                            ),
-                          ),
-                          onPressed: () {
-                            _showConfirmationDialog(purpose: "Update");
-                          },
-                          child: Text("Update",
-                              style: TextStyle(color: Colors.white)),
-                        ),
-                        SizedBox(width: 10),
-                        ElevatedButton(
-                          style: ElevatedButton.styleFrom(
-                            minimumSize: const Size(200, 50),
-                            backgroundColor: Colors.red,
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(5.0),
-                            ),
-                          ),
-                          onPressed: () {
-                            _cancelEdit();
-                          },
-                          child: Text("Cancel",
-                              style: TextStyle(color: Colors.white)),
-                        ),
-                      ],
-                    )
-                  : Row(
-                      mainAxisAlignment: MainAxisAlignment.end,
-                      children: [
-                        ElevatedButton(
-                          style: ElevatedButton.styleFrom(
-                            minimumSize: const Size(200, 50),
-                            backgroundColor: Colors.blue,
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(5.0),
-                            ),
-                          ),
-                          onPressed: () {
-                            if (_formKey.currentState!.validate()) {
-                              _showConfirmationDialog(purpose: "Submit");
-                            }
-                          },
-                          child: const Text(
-                            'Save',
-                            style: TextStyle(color: Colors.white),
-                          ),
-                        ),
-                      ],
-                    ),
-              SizedBox(height: 10),
-              ListView.builder(
-                shrinkWrap: true,
-                physics: const NeverScrollableScrollPhysics(),
-                itemCount: unitList.length,
-                itemBuilder: (context, index) {
-                  return Card(
-                    child: ListTile(
-                        onTap: () {
-                          showDialog(
-                              context: context,
-                              builder: (BuildContext context) {
-                                return AlertDialog(
-                                  title: Text(
-                                      'Unit Name : ${unitList[index].unit_name}'),
-                                  content: SingleChildScrollView(
-                                    child: ListBody(
-                                      children: [
-                                        Text(
-                                            'Unit Code : ${unitList[index].unit_code}'),
-                                        SizedBox(height: 5),
-                                        Text(
-                                            'Notes : ${unitList[index].notes}'),
-                                        SizedBox(height: 5),
-                                        Text(
-                                            'Start Date : ${unitList[index].start_date}'),
-                                        SizedBox(height: 5),
-                                        Text(
-                                            'End Date: ${unitList[index].end_date}'),
-                                        SizedBox(height: 5),
-                                      ],
-                                    ),
-                                  ),
-                                );
-                              });
-                        },
-                        title: Text(unitList[index].unit_name),
-                        subtitle: Text(unitList[index].unit_code),
-                        trailing: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            IconButton(
-                              onPressed: () {
-                                _editUnit(unitList[index]);
-                              },
-                              icon: Icon(Icons.edit),
-                            ),
-                            _isadmin
-                                ? IconButton(
-                                    icon: const Icon(Icons.delete),
-                                    onPressed: () {
-                                      _showConfirmationDialog(
-                                          purpose: "Delete", id: index);
-                                    },
-                                  )
-                                : const SizedBox(width: 0),
-                          ],
-                        )),
-                  );
+    return DataRow(cells: [
+      DataCell(Text(unit.unit_name, overflow: TextOverflow.ellipsis)),
+      DataCell(Text(unit.unit_code, overflow: TextOverflow.ellipsis)),
+      DataCell(Text(unit.notes ?? '', overflow: TextOverflow.ellipsis)),
+      DataCell(Text(unit.start_date ?? '', overflow: TextOverflow.ellipsis)),
+      DataCell(Text(unit.end_date ?? '', overflow: TextOverflow.ellipsis)),
+      DataCell(
+        Row(
+          children: [
+            IconButton(
+                onPressed: () {
+                  onEdit(unit);
                 },
-              )
-            ],
-          ),
+                icon: Icon(Icons.edit)),
+            isadmin
+                ? IconButton(
+                    icon: const Icon(Icons.delete),
+                    onPressed: () {
+                      onDelete(index);
+                    },
+                  )
+                : const SizedBox(width: 0),
+          ],
         ),
-      ),
-    );
+      )
+    ]);
   }
+
+  @override
+  bool get isRowCountApproximate => false;
+
+  @override
+  int get rowCount => units.length;
+
+  @override
+  int get selectedRowCount => 0;
 }

@@ -3,6 +3,7 @@ import 'package:gk_aqua/models/department.dart';
 import 'package:gk_aqua/models/division.dart';
 import 'package:gk_aqua/models/tank.dart';
 import 'package:gk_aqua/models/waterParameter.dart';
+import 'package:gk_aqua/screens/activities/WaterQualityActivityView.dart';
 import 'package:gk_aqua/services/api_department.dart';
 import 'package:gk_aqua/services/division_services.dart';
 import 'package:gk_aqua/services/tank_services.dart';
@@ -21,7 +22,10 @@ class WaterQuality extends StatelessWidget {
 }
 
 class WaterqualityActivityScreen extends StatefulWidget {
-  const WaterqualityActivityScreen({super.key});
+  final Map<String, dynamic>? WaterQualityData;
+  final bool isEditing;
+  const WaterqualityActivityScreen(
+      {super.key, this.WaterQualityData, this.isEditing = false});
 
   @override
   State<WaterqualityActivityScreen> createState() =>
@@ -45,6 +49,7 @@ class _WaterqualityActivityScreenState
   Map<int, TextEditingController> parameterControllers = {};
 
   bool _isLoading = false;
+  bool _isEditing = false;
 
   @override
   void initState() {
@@ -63,6 +68,7 @@ class _WaterqualityActivityScreenState
     await _getDivisions();
     await _getTanks();
     await _getWaterParameters();
+    await _initializeData();
     setState(() {
       _isLoading = false;
     });
@@ -239,6 +245,40 @@ class _WaterqualityActivityScreenState
     }
   }
 
+  //Initialize data
+  Future<void> _initializeData() async {
+    setState(() {
+      if (widget.WaterQualityData != null && widget.isEditing) {
+        _isEditing = true;
+        _dateController.text =
+            widget.WaterQualityData!['check_date'].toString();
+        _selectedDepartment = departments.fold(null, (previousValue, element) {
+          if (element.id == widget.WaterQualityData!['department_id']) {
+            return element;
+          }
+          return previousValue;
+        });
+
+        _selectedDivision = divisions.fold(null, (previousValue, element) {
+          if (element.id == widget.WaterQualityData!['division_id']) {
+            return element;
+          }
+          return previousValue;
+        });
+
+        _selectedTank = tanks.fold(null, (previousValue, element) {
+          if (element.id == widget.WaterQualityData!['tank_id']) {
+            return element;
+          }
+          return previousValue;
+        });
+        _notesController.text = widget.WaterQualityData!['notes'] ?? '';
+      } else {
+        _isEditing = false;
+      }
+    });
+  }
+
   // Submit form
   Future<void> _submitForm() async {
     if (!_formKey.currentState!.validate()) {
@@ -346,235 +386,722 @@ class _WaterqualityActivityScreenState
     });
   }
 
+  //confirmation dialog
+  void _showConfirmationDialog({required String purpose}) {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: Text('$purpose Confirmation'),
+          content: Text('Are you sure you want to $purpose the Data?'),
+          actions: <Widget>[
+            TextButton(
+              child: Text('$purpose'),
+              onPressed: () {
+                if (purpose == 'Submit') {
+                  _submitForm();
+                } else if (purpose == 'Update') {
+                  // _updateEmployee();
+                }
+                Navigator.of(context).pop();
+              },
+            ),
+            TextButton(
+              child: const Text(
+                'Cancel',
+                style: TextStyle(color: Colors.red),
+              ),
+              onPressed: () {
+                Navigator.of(context).pop();
+              },
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  void _cancelUpdate() {
+    setState(() {
+      _dateController.clear();
+      _isEditing = false;
+      _selectedDepartment = null;
+      _selectedDivision = null;
+      _selectedTank = null;
+      _notesController.clear();
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        backgroundColor: Colors.blue,
-        leading: IconButton(
-          onPressed: () {
-            Navigator.of(context).pop();
-          },
-          icon: const Icon(
-            Icons.menu,
-            color: Colors.white,
-          ),
-        ),
-        title: const Text(
-          'Activity/Water Quality Check',
-          style: TextStyle(color: Colors.white),
-        ),
-        actions: const [
-          Padding(
-            padding: EdgeInsets.all(8.0),
-            child: Icon(
-              Icons.account_circle,
+        appBar: AppBar(
+          backgroundColor: Colors.blue,
+          leading: IconButton(
+            onPressed: () {
+              Navigator.of(context).pop();
+            },
+            icon: const Icon(
+              Icons.menu,
               color: Colors.white,
-              size: 30,
             ),
-          )
-        ],
-      ),
-      body: _isLoading
-          ? const Center(child: CircularProgressIndicator())
-          : SingleChildScrollView(
-              child: Padding(
-                padding: const EdgeInsets.all(8.0),
-                child: Form(
-                  key: _formKey,
-                  child: Column(
-                    children: [
-                      //User Id
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Text(
-                            'User Id : ${_userId}',
-                            style: const TextStyle(
-                                fontSize: 15, fontWeight: FontWeight.bold),
+          ),
+          title: const Text(
+            'Activity/Water Quality Check',
+            style: TextStyle(color: Colors.white),
+          ),
+          actions: const [
+            Padding(
+              padding: EdgeInsets.all(8.0),
+              child: Icon(
+                Icons.account_circle,
+                color: Colors.white,
+                size: 30,
+              ),
+            )
+          ],
+        ),
+        body: _isLoading
+            ? const Center(child: CircularProgressIndicator())
+            : LayoutBuilder(builder: (context, constraints) {
+                if (constraints.maxWidth > 600) {
+                  return _desktopView();
+                } else {
+                  return _mobileView();
+                }
+              }));
+  }
+
+  Widget _desktopView() {
+    return SingleChildScrollView(
+      child: Padding(
+        padding: const EdgeInsets.all(8.0),
+        child: Form(
+          key: _formKey,
+          child: Column(
+            children: [
+              //User Id
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Text(
+                    'User Id : ${_userId}',
+                    style: const TextStyle(
+                        fontSize: 15, fontWeight: FontWeight.bold),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 10),
+
+              Row(
+                mainAxisAlignment: MainAxisAlignment.start,
+                children: [
+                  _isEditing
+                      ? ElevatedButton(
+                          style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.green,
+                              minimumSize: Size(200, 50),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(5.0),
+                              )),
+                          onPressed: () {}, //_cancelUpdate,
+                          child: const Wrap(
+                            children: [
+                              Text(
+                                "Add New Water Quality Check",
+                                style: TextStyle(color: Colors.white),
+                              ),
+                              SizedBox(width: 10),
+                              Icon(Icons.add, color: Colors.white)
+                            ],
                           ),
-                        ],
-                      ),
-                      const SizedBox(height: 10),
-
-                      //Date
-                      TextFormField(
-                        controller: _dateController,
-                        readOnly: true,
-                        onTap: () => _selectDate(context, _dateController),
-                        decoration: const InputDecoration(
-                            labelText: 'Date',
-                            border: OutlineInputBorder(),
-                            suffix: Icon(Icons.calendar_month)),
-                        validator: (value) {
-                          if (value == null || value.isEmpty) {
-                            return 'Please select a date';
-                          }
-                          return null;
-                        },
-                      ),
-                      SizedBox(height: 10),
-
-                      //Department Dropdown
-                      DropdownButtonFormField<Department>(
-                          value: _selectedDepartment,
-                          onChanged: (Department? newValue) {
-                            setState(() {
-                              _selectedDepartment = newValue;
-                              _getDivisions();
-                              _selectedDivision = null;
-                            });
-                          },
-                          items: departments.map<DropdownMenuItem<Department>>(
-                              (Department department) {
-                            return DropdownMenuItem<Department>(
-                              value: department,
-                              child: Text(department.departmentName),
+                        )
+                      : ElevatedButton(
+                          style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.green,
+                              minimumSize: Size(200, 50),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(5.0),
+                              )),
+                          onPressed: () {
+                            Navigator.of(context).push(
+                              MaterialPageRoute(
+                                builder: (context) {
+                                  return WaterQualityActivityView();
+                                },
+                              ),
                             );
-                          }).toList(),
-                          decoration: const InputDecoration(
-                            labelText: 'Department',
-                            border: OutlineInputBorder(),
+                          },
+                          child: const Wrap(
+                            children: [
+                              Text(
+                                "View Water Quality Check",
+                                style: TextStyle(color: Colors.white),
+                              ),
+                              SizedBox(width: 10),
+                              Icon(Icons.remove_red_eye_outlined,
+                                  color: Colors.white)
+                            ],
                           ),
-                          validator: (value) {
-                            if (value == null) {
-                              return 'Please select a department';
-                            }
-                            return null;
-                          }),
-                      SizedBox(height: 10),
+                        ),
+                ],
+              ),
+              const SizedBox(height: 10),
 
-                      //Division Dropdown
-                      DropdownButtonFormField<DivisionModel>(
-                        value: _selectedDivision,
-                        onChanged: (DivisionModel? newValue) {
+              //Date and Department
+              Row(
+                children: [
+                  Expanded(
+                    child: TextFormField(
+                      controller: _dateController,
+                      readOnly: true,
+                      onTap: () => _selectDate(context, _dateController),
+                      decoration: const InputDecoration(
+                          labelText: 'Date',
+                          border: OutlineInputBorder(),
+                          suffix: Icon(Icons.calendar_month)),
+                      validator: (value) {
+                        if (value == null || value.isEmpty) {
+                          return 'Please select a date';
+                        }
+                        return null;
+                      },
+                    ),
+                  ),
+                  SizedBox(width: 10),
+
+                  //Department Dropdown
+                  Expanded(
+                    child: DropdownButtonFormField<Department>(
+                        value: _selectedDepartment,
+                        onChanged: (Department? newValue) {
                           setState(() {
-                            _selectedDivision = newValue;
-                            _getTanks();
-                            _selectedTank = null;
+                            _selectedDepartment = newValue;
+                            _getDivisions();
+                            _selectedDivision = null;
                           });
                         },
-                        items: divisions.map<DropdownMenuItem<DivisionModel>>(
-                            (DivisionModel division) {
-                          return DropdownMenuItem<DivisionModel>(
-                            value: division,
-                            child: Text(division.division_name),
+                        items: departments.map<DropdownMenuItem<Department>>(
+                            (Department department) {
+                          return DropdownMenuItem<Department>(
+                            value: department,
+                            child: Text(department.departmentName),
                           );
                         }).toList(),
                         decoration: const InputDecoration(
-                          labelText: 'Division',
+                          labelText: 'Department',
                           border: OutlineInputBorder(),
                         ),
                         validator: (value) {
                           if (value == null) {
-                            return 'Please select a division';
+                            return 'Please select a department';
                           }
                           return null;
-                        },
-                      ),
-                      SizedBox(height: 10),
+                        }),
+                  ),
+                ],
+              ),
 
-                      // Tank Dropdown
-                      DropdownButtonFormField<TankModel>(
-                        value: _selectedTank,
-                        onChanged: (TankModel? newValue) {
-                          setState(() {
-                            _selectedTank = newValue!;
-                          });
-                        },
-                        items: tanks
-                            .map(
-                                (TankModel tank) => DropdownMenuItem<TankModel>(
-                                      value: tank,
-                                      child: Text(tank.tank_code),
-                                    ))
-                            .toList(),
-                        decoration: const InputDecoration(
-                            border: OutlineInputBorder(), labelText: 'Tank'),
-                        validator: (value) {
-                          if (value == null) {
-                            return 'Please select a tank';
-                          }
-                          return null;
-                        },
-                      ),
-                      SizedBox(height: 10),
+              SizedBox(height: 10),
 
-                      //Water Parameter Fields
-                      Wrap(
-                        children: [
-                          ...waterparameters.map((parameter) => Padding(
-                                padding:
-                                    const EdgeInsets.symmetric(vertical: 8.0),
-                                child: Row(
-                                  children: [
-                                    Expanded(
-                                      child: TextFormField(
-                                        initialValue: parameter
-                                            .parameter_name, // Display parameter name
-                                        readOnly: true,
-                                        decoration: InputDecoration(
-                                          labelText: 'Water Parameter',
-                                          border: OutlineInputBorder(),
-                                        ),
-                                      ),
-                                    ),
-                                    const SizedBox(width: 8),
-                                    Expanded(
-                                      child: TextFormField(
-                                        controller:
-                                            parameterControllers[parameter.id],
-                                        decoration: InputDecoration(
-                                          labelText: parameter.unit!
-                                              .unit_name, // Display unit name
-                                          border: OutlineInputBorder(),
-                                        ),
-                                        validator: (value) {
-                                          if (value == null || value.isEmpty) {
-                                            return 'Please enter a value for ${parameter.unit!.unit_name}';
-                                          }
-                                          return null;
-                                        },
-                                      ),
-                                    ),
-                                  ],
+              //Division Dropdown and Tank Dropdown
+              Row(
+                children: [
+                  Expanded(
+                    child: DropdownButtonFormField<DivisionModel>(
+                      value: _selectedDivision,
+                      onChanged: (DivisionModel? newValue) {
+                        setState(() {
+                          _selectedDivision = newValue;
+                          _getTanks();
+                          _selectedTank = null;
+                        });
+                      },
+                      items: divisions.map<DropdownMenuItem<DivisionModel>>(
+                          (DivisionModel division) {
+                        return DropdownMenuItem<DivisionModel>(
+                          value: division,
+                          child: Text(division.division_name),
+                        );
+                      }).toList(),
+                      decoration: const InputDecoration(
+                        labelText: 'Division',
+                        border: OutlineInputBorder(),
+                      ),
+                      validator: (value) {
+                        if (value == null) {
+                          return 'Please select a division';
+                        }
+                        return null;
+                      },
+                    ),
+                  ),
+                  SizedBox(width: 10),
+
+                  // Tank Dropdown
+                  Expanded(
+                    child: DropdownButtonFormField<TankModel>(
+                      value: _selectedTank,
+                      onChanged: (TankModel? newValue) {
+                        setState(() {
+                          _selectedTank = newValue!;
+                        });
+                      },
+                      items: tanks
+                          .map((TankModel tank) => DropdownMenuItem<TankModel>(
+                                value: tank,
+                                child: Text(tank.tank_code),
+                              ))
+                          .toList(),
+                      decoration: const InputDecoration(
+                          border: OutlineInputBorder(), labelText: 'Tank'),
+                      validator: (value) {
+                        if (value == null) {
+                          return 'Please select a tank';
+                        }
+                        return null;
+                      },
+                    ),
+                  ),
+                ],
+              ),
+
+              SizedBox(height: 10),
+
+              //Water Parameter Fields
+              Wrap(
+                children: [
+                  ...waterparameters.map((parameter) => Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 8.0),
+                        child: Row(
+                          children: [
+                            Expanded(
+                              child: TextFormField(
+                                initialValue: parameter
+                                    .parameter_name, // Display parameter name
+                                readOnly: true,
+                                decoration: InputDecoration(
+                                  labelText: 'Water Parameter',
+                                  border: OutlineInputBorder(),
                                 ),
-                              )),
-                        ],
-                      ),
-                      const SizedBox(height: 10),
-
-                      //Notes
-                      TextFormField(
-                        controller: _notesController,
-                        decoration: const InputDecoration(
-                          labelText: 'Notes',
-                          border: OutlineInputBorder(),
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: TextFormField(
+                                controller: parameterControllers[parameter.id],
+                                decoration: InputDecoration(
+                                  labelText: parameter
+                                      .unit!.unit_name, // Display unit name
+                                  border: OutlineInputBorder(),
+                                ),
+                                validator: (value) {
+                                  if (value == null || value.isEmpty) {
+                                    return 'Please enter a value for ${parameter.unit!.unit_name}';
+                                  }
+                                  return null;
+                                },
+                              ),
+                            ),
+                          ],
                         ),
-                        maxLines: null,
-                      ),
-                      const SizedBox(height: 10),
+                      )),
+                ],
+              ),
+              const SizedBox(height: 10),
 
-                      //Submit Button
-                      ElevatedButton(
-                        style: ElevatedButton.styleFrom(
-                            backgroundColor: Colors.blue,
-                            minimumSize: Size(double.infinity, 50),
-                            shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(5))),
-                        onPressed: () async {
-                          if (_formKey.currentState!.validate()) {
-                            _submitForm();
-                          }
-                        },
-                        child: const Text('Submit',
-                            style: TextStyle(color: Colors.white)),
-                      ),
-                    ],
+              //Notes
+              TextFormField(
+                controller: _notesController,
+                decoration: const InputDecoration(
+                  labelText: 'Notes',
+                  border: OutlineInputBorder(),
+                  constraints: BoxConstraints(
+                    minHeight:
+                        50.0, // Adjust this to match TextFormField height
                   ),
                 ),
+                maxLines: null,
               ),
-            ),
+              const SizedBox(height: 10),
+
+              //Submit Button
+              _isEditing
+                  ? Row(
+                      mainAxisAlignment: MainAxisAlignment.end,
+                      children: [
+                        ElevatedButton(
+                          style: ElevatedButton.styleFrom(
+                            minimumSize: Size(200, 50),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(5.0),
+                            ),
+                            backgroundColor: Colors.blue,
+                          ),
+                          onPressed: () {
+                            if (_formKey.currentState!.validate()) {
+                              _showConfirmationDialog(purpose: "Update");
+                            }
+                          },
+                          child: const Text('Update',
+                              style: TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.white)),
+                        ),
+                        SizedBox(width: 10),
+                        ElevatedButton(
+                          style: ElevatedButton.styleFrom(
+                            minimumSize: Size(200, 50),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(5.0),
+                            ),
+                            backgroundColor: Colors.red,
+                          ),
+                          onPressed: _cancelUpdate,
+                          child: const Text('Cancel',
+                              style: TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.white)),
+                        ),
+                      ],
+                    )
+                  : Row(
+                      mainAxisAlignment: MainAxisAlignment.end,
+                      children: [
+                        ElevatedButton(
+                          style: ElevatedButton.styleFrom(
+                            minimumSize: Size(200, 50),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(5.0),
+                            ),
+                            backgroundColor: Colors.blue,
+                          ),
+                          onPressed: () {
+                            if (_formKey.currentState!.validate()) {
+                              _showConfirmationDialog(purpose: "Submit");
+                            }
+                          },
+                          child: const Text('Submit',
+                              style: TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.white)),
+                        ),
+                      ],
+                    ),
+              const SizedBox(height: 20),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _mobileView() {
+    return SingleChildScrollView(
+      child: Padding(
+        padding: const EdgeInsets.all(8.0),
+        child: Form(
+          key: _formKey,
+          child: Column(
+            children: [
+              //User Id
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Text(
+                    'User Id : ${_userId}',
+                    style: const TextStyle(
+                        fontSize: 15, fontWeight: FontWeight.bold),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 10),
+
+              //View collection button
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  _isEditing
+                      ? ElevatedButton(
+                          style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.green,
+                              minimumSize: Size(200, 50),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(5.0),
+                              )),
+                          onPressed: () {}, //_cancelUpdate,
+                          child: const Wrap(
+                            children: [
+                              Text(
+                                "Add New Water Quality Check",
+                                style: TextStyle(color: Colors.white),
+                              ),
+                              SizedBox(width: 10),
+                              Icon(Icons.add, color: Colors.white)
+                            ],
+                          ),
+                        )
+                      : ElevatedButton(
+                          style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.green,
+                              minimumSize: Size(200, 50),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(5.0),
+                              )),
+                          onPressed: () {
+                            Navigator.of(context).push(
+                              MaterialPageRoute(
+                                builder: (context) {
+                                  return WaterQualityActivityView();
+                                },
+                              ),
+                            );
+                          },
+                          child: const Wrap(
+                            children: [
+                              Text(
+                                "View Water Quality Check",
+                                style: TextStyle(color: Colors.white),
+                              ),
+                              SizedBox(width: 10),
+                              Icon(Icons.remove_red_eye_outlined,
+                                  color: Colors.white)
+                            ],
+                          ),
+                        ),
+                ],
+              ),
+              const SizedBox(height: 10),
+
+              //Date
+              TextFormField(
+                controller: _dateController,
+                readOnly: true,
+                onTap: () => _selectDate(context, _dateController),
+                decoration: const InputDecoration(
+                    labelText: 'Date',
+                    border: OutlineInputBorder(),
+                    suffix: Icon(Icons.calendar_month)),
+                validator: (value) {
+                  if (value == null || value.isEmpty) {
+                    return 'Please select a date';
+                  }
+                  return null;
+                },
+              ),
+              SizedBox(height: 10),
+
+              //Department Dropdown
+              DropdownButtonFormField<Department>(
+                  value: _selectedDepartment,
+                  onChanged: (Department? newValue) {
+                    setState(() {
+                      _selectedDepartment = newValue;
+                      _getDivisions();
+                      _selectedDivision = null;
+                    });
+                  },
+                  items: departments.map<DropdownMenuItem<Department>>(
+                      (Department department) {
+                    return DropdownMenuItem<Department>(
+                      value: department,
+                      child: Text(department.departmentName),
+                    );
+                  }).toList(),
+                  decoration: const InputDecoration(
+                    labelText: 'Department',
+                    border: OutlineInputBorder(),
+                  ),
+                  validator: (value) {
+                    if (value == null) {
+                      return 'Please select a department';
+                    }
+                    return null;
+                  }),
+              SizedBox(height: 10),
+
+              //Division Dropdown
+              DropdownButtonFormField<DivisionModel>(
+                value: _selectedDivision,
+                onChanged: (DivisionModel? newValue) {
+                  setState(() {
+                    _selectedDivision = newValue;
+                    _getTanks();
+                    _selectedTank = null;
+                  });
+                },
+                items: divisions.map<DropdownMenuItem<DivisionModel>>(
+                    (DivisionModel division) {
+                  return DropdownMenuItem<DivisionModel>(
+                    value: division,
+                    child: Text(division.division_name),
+                  );
+                }).toList(),
+                decoration: const InputDecoration(
+                  labelText: 'Division',
+                  border: OutlineInputBorder(),
+                ),
+                validator: (value) {
+                  if (value == null) {
+                    return 'Please select a division';
+                  }
+                  return null;
+                },
+              ),
+              SizedBox(height: 10),
+
+              // Tank Dropdown
+              DropdownButtonFormField<TankModel>(
+                value: _selectedTank,
+                onChanged: (TankModel? newValue) {
+                  setState(() {
+                    _selectedTank = newValue!;
+                  });
+                },
+                items: tanks
+                    .map((TankModel tank) => DropdownMenuItem<TankModel>(
+                          value: tank,
+                          child: Text(tank.tank_code),
+                        ))
+                    .toList(),
+                decoration: const InputDecoration(
+                    border: OutlineInputBorder(), labelText: 'Tank'),
+                validator: (value) {
+                  if (value == null) {
+                    return 'Please select a tank';
+                  }
+                  return null;
+                },
+              ),
+              SizedBox(height: 10),
+
+              //Water Parameter Fields
+              Wrap(
+                children: [
+                  ...waterparameters.map((parameter) => Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 8.0),
+                        child: Row(
+                          children: [
+                            Expanded(
+                              child: TextFormField(
+                                initialValue: parameter
+                                    .parameter_name, // Display parameter name
+                                readOnly: true,
+                                decoration: InputDecoration(
+                                  labelText: 'Water Parameter',
+                                  border: OutlineInputBorder(),
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: TextFormField(
+                                controller: parameterControllers[parameter.id],
+                                decoration: InputDecoration(
+                                  labelText: parameter
+                                      .unit!.unit_name, // Display unit name
+                                  border: OutlineInputBorder(),
+                                ),
+                                validator: (value) {
+                                  if (value == null || value.isEmpty) {
+                                    return 'Please enter a value for ${parameter.unit!.unit_name}';
+                                  }
+                                  return null;
+                                },
+                              ),
+                            ),
+                          ],
+                        ),
+                      )),
+                ],
+              ),
+              const SizedBox(height: 10),
+
+              //Notes
+              TextFormField(
+                controller: _notesController,
+                decoration: const InputDecoration(
+                  labelText: 'Notes',
+                  border: OutlineInputBorder(),
+                ),
+                maxLines: null,
+              ),
+              const SizedBox(height: 10),
+
+              //Submit Button
+              _isEditing
+                  ? Row(
+                      mainAxisAlignment: MainAxisAlignment.start,
+                      children: [
+                        Expanded(
+                          child: ElevatedButton(
+                            style: ElevatedButton.styleFrom(
+                              minimumSize: Size(double.infinity, 50),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(5.0),
+                              ),
+                              backgroundColor: Colors.blue,
+                            ),
+                            onPressed: () {
+                              if (_formKey.currentState!.validate()) {
+                                _showConfirmationDialog(purpose: "Update");
+                              }
+                            },
+                            child: const Text('Update',
+                                style: TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                    color: Colors.white)),
+                          ),
+                        ),
+                        SizedBox(width: 10),
+                        Expanded(
+                          child: ElevatedButton(
+                            style: ElevatedButton.styleFrom(
+                              minimumSize: Size(double.infinity, 50),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(5.0),
+                              ),
+                              backgroundColor: Colors.red,
+                            ),
+                            onPressed: _cancelUpdate,
+                            child: const Text('Cancel',
+                                style: TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                    color: Colors.white)),
+                          ),
+                        ),
+                      ],
+                    )
+                  : Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Expanded(
+                          child: ElevatedButton(
+                            style: ElevatedButton.styleFrom(
+                              minimumSize: Size(double.infinity, 50),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(5.0),
+                              ),
+                              backgroundColor: Colors.blue,
+                            ),
+                            onPressed: () {
+                              if (_formKey.currentState!.validate()) {
+                                _showConfirmationDialog(purpose: "Submit");
+                              }
+                            },
+                            child: const Text('Submit',
+                                style: TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                    color: Colors.white)),
+                          ),
+                        ),
+                      ],
+                    ),
+              const SizedBox(height: 20),
+            ],
+          ),
+        ),
+      ),
     );
   }
 }

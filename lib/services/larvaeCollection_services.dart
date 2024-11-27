@@ -48,7 +48,7 @@ class LarvaeCollectionService {
   }
 
   //update larva collection tank
-  Future<void> updateLarvaeCollectionTank(
+  Future<http.Response> updateLarvaeCollectionTank(
       Map<String, dynamic> requestData, int id) async {
     var url = Uri.parse('$apiUrl/$id');
     try {
@@ -57,9 +57,7 @@ class LarvaeCollectionService {
         headers: {"Content-Type": "application/json"},
         body: jsonEncode(requestData),
       );
-      if (response.statusCode != 200) {
-        throw Exception('Failed to update larva collection tank');
-      }
+      return response;
     } catch (error) {
       throw Exception('Failed to connect to API: $error');
     }

@@ -6,13 +6,11 @@ class WaterqualityServices {
   final String apiUrl = 'http://127.0.0.1:8000/api/water-quality-checks';
 
   //Get all water quality checks
-  Future<List<waterQualityModel>> fetchWaterQualityChecks() async {
+  Future<List> fetchWaterQualityChecks() async {
     final response = await http.get(Uri.parse(apiUrl));
     if (response.statusCode == 200) {
       List jsonResponse = json.decode(response.body);
-      return jsonResponse
-          .map((data) => waterQualityModel.fromJson(data))
-          .toList();
+      return jsonResponse.map((data) => data).toList();
     } else {
       throw Exception('Failed to load water quality checks');
     }
@@ -41,6 +39,19 @@ class WaterqualityServices {
       return response;
     } catch (e) {
       throw Exception('Failed to connect to API: $e');
+    }
+  }
+
+  //delete water quality check
+  Future<void> deleteWaterQualityCheck(int id) async {
+    var url = Uri.parse('$apiUrl/$id');
+    try {
+      var response = await http.delete(url);
+      if (response.statusCode != 200) {
+        throw Exception('Failed to delete water quality check');
+      }
+    } catch (error) {
+      throw Exception('Failed to connect to API: $error');
     }
   }
 }

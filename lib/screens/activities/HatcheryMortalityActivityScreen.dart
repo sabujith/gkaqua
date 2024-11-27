@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:gk_aqua/models/department.dart';
 import 'package:gk_aqua/models/division.dart';
 import 'package:gk_aqua/models/tank.dart';
+import 'package:gk_aqua/screens/activities/HatcheryMortalityViewScreen.dart';
 import 'package:gk_aqua/services/api_department.dart';
 import 'package:gk_aqua/services/division_services.dart';
 import 'package:gk_aqua/services/hatcheryMortalityServices.dart';
@@ -19,7 +20,10 @@ class HatcheryMortality extends StatelessWidget {
 }
 
 class HatcheryMortalityActivityScreen extends StatefulWidget {
-  const HatcheryMortalityActivityScreen({super.key});
+  final Map<String, dynamic>? updatingData;
+  final bool isEditing;
+  const HatcheryMortalityActivityScreen(
+      {super.key, this.updatingData, this.isEditing = false});
 
   @override
   State<HatcheryMortalityActivityScreen> createState() =>
@@ -44,6 +48,7 @@ class _HatcheryMortalityActivityScreenState
   List<TankModel> tanks = [];
 
   bool _isLoading = false;
+  bool _isEditing = false;
 
   @override
   void initState() {
@@ -66,6 +71,7 @@ class _HatcheryMortalityActivityScreenState
       await _getDepartments();
       await _getDivisions();
       await _getTanks();
+      await _initializeData();
     } catch (e) {
       print('Error fetching data: $e');
     } finally {
@@ -80,6 +86,41 @@ class _HatcheryMortalityActivityScreenState
     setState(() {
       UserId = 'user123';
     });
+  }
+
+  //initialize data for updating
+  Future<void> _initializeData() async {
+    if (widget.isEditing && widget.updatingData != null) {
+      setState(() {
+        _isEditing = true;
+        _dateController.text = widget.updatingData!['date'];
+        _selectedDivision = divisions.fold(null, (previousValue, item) {
+          if (item.id == widget.updatingData!['divisionId']) {
+            return item;
+          } else {
+            return previousValue;
+          }
+        });
+        _selectedTankCode = tanks.fold(null, (previousValue, item) {
+          if (item.id == widget.updatingData!['tankId']) {
+            return item;
+          } else {
+            return previousValue;
+          }
+        });
+        _larvaeCountController.text =
+            widget.updatingData!['larvaeCount'].toString();
+        _countMultiplierController.text =
+            widget.updatingData!['countMultiplier'].toString();
+        _totalCountController.text =
+            widget.updatingData!['totalMortality'].toString();
+        _notesController.text = widget.updatingData!['note'];
+      });
+    } else {
+      setState(() {
+        _isEditing = false;
+      });
+    }
   }
 
   // Get departments
@@ -230,61 +271,152 @@ class _HatcheryMortalityActivityScreenState
     });
   }
 
+  //confirmation dialog
+  void _showConfirmationDialog({required String purpose}) {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: Text('$purpose Confirmation'),
+          content: Text('Are you sure you want to $purpose the Data?'),
+          actions: <Widget>[
+            TextButton(
+              child: Text('$purpose'),
+              onPressed: () {
+                if (purpose == 'Submit') {
+                  _submitForm();
+                } else if (purpose == 'Update') {
+                  _updateForm();
+                }
+                Navigator.of(context).pop();
+              },
+            ),
+            TextButton(
+              child: const Text(
+                'Cancel',
+                style: TextStyle(color: Colors.red),
+              ),
+              onPressed: () {
+                Navigator.of(context).pop();
+              },
+            ),
+          ],
+        );
+      },
+    );
+  }
+
   //Submit form
   void _submitForm() async {
     HatcheryMortalityService hatcheryMortalityService =
         HatcheryMortalityService();
 
-    if (_formKey.currentState!.validate()) {
-      String date = _dateController.text;
-      String employee_code = UserId!;
-      int department_id = _selectedDepartment!.id!;
-      int division_id = _selectedDivision!.id!;
-      int tank_id = _selectedTankCode!.id!;
-      String larvae_count = _larvaeCountController.text;
-      String count_multiplier = _countMultiplierController.text;
-      String total_mortality_count = _totalCountController.text;
-      String notes = _notesController.text;
+    String date = _dateController.text;
+    String employee_code = UserId!;
+    int department_id = _selectedDepartment!.id!;
+    int division_id = _selectedDivision!.id!;
+    int tank_id = _selectedTankCode!.id!;
+    String larvae_count = _larvaeCountController.text;
+    String count_multiplier = _countMultiplierController.text;
+    String total_mortality_count = _totalCountController.text;
+    String notes = _notesController.text;
 
-      Map<String, dynamic> requestData = {
-        'date': date,
-        'employee_code': employee_code,
-        'department_id': department_id,
-        'division_id': division_id,
-        'tank_id': tank_id,
-        'larvae_count': larvae_count,
-        'count_multiplier': count_multiplier,
-        'total_mortality_count': total_mortality_count,
-        'notes': notes
-      };
+    Map<String, dynamic> requestData = {
+      'date': date,
+      'employee_code': employee_code,
+      'department_id': department_id,
+      'division_id': division_id,
+      'tank_id': tank_id,
+      'larvae_count': larvae_count,
+      'count_multiplier': count_multiplier,
+      'total_mortality_count': total_mortality_count,
+      'notes': notes
+    };
 
-      try {
-        var response =
-            await hatcheryMortalityService.createMortality(requestData);
-        if (response.statusCode == 201) {
-          showDialog(
-            context: context,
-            builder: (BuildContext context) {
-              return SimpleDialog(
-                title: const Text('Success'),
-                children: [
-                  SimpleDialogOption(
-                    onPressed: () {
-                      Navigator.pop(context);
-                    },
-                    child: const Text('Mortality created successfully'),
-                  ),
-                ],
-              );
-            },
-          );
-
-          _clearForm();
-        } else {
-          throw 'Failed to add mortality data';
-        }
-      } catch (e) {
+    try {
+      var response =
+          await hatcheryMortalityService.createMortality(requestData);
+      if (response.statusCode == 201) {
         showDialog(
+          context: context,
+          builder: (BuildContext context) {
+            return SimpleDialog(
+              title: const Text('Success'),
+              children: [
+                SimpleDialogOption(
+                  onPressed: () {
+                    Navigator.pop(context);
+                  },
+                  child: const Text('Mortality created successfully'),
+                ),
+              ],
+            );
+          },
+        );
+
+        _clearForm();
+      } else {
+        throw 'Failed to add mortality data';
+      }
+    } catch (e) {
+      showDialog(
+        context: context,
+        builder: (BuildContext context) {
+          return SimpleDialog(
+            title: const Text('Error'),
+            children: [
+              SimpleDialogOption(
+                onPressed: () {
+                  Navigator.pop(context);
+                },
+                child: Text(e.toString()),
+              )
+            ],
+          );
+        },
+      );
+    }
+  }
+
+  //update form
+  void _updateForm() async {
+    int id = widget.updatingData!['id'];
+    Map<String, dynamic> requestData = {
+      'date': _dateController.text,
+      'employee_code': UserId,
+      'department_id': _selectedDepartment!.id,
+      'division_id': _selectedDivision!.id,
+      'tank_id': _selectedTankCode!.id,
+      'larvae_count': _larvaeCountController.text,
+      'count_multiplier': _countMultiplierController.text,
+      'total_mortality_count': _totalCountController.text,
+      'notes': _notesController.text
+    };
+
+    try {
+      await HatcheryMortalityService().updateMortality(requestData, id);
+      showDialog(
+          context: context,
+          builder: (BuildContext context) {
+            return SimpleDialog(
+              title: const Text('Success'),
+              children: [
+                SimpleDialogOption(
+                  onPressed: () {
+                    Navigator.pop(context);
+                  },
+                  child: const Text('Mortality updated successfully'),
+                ),
+              ],
+            );
+          });
+      setState(() {
+        _isEditing = false;
+      });
+
+      _clearForm();
+    } catch (e) {
+      showDialog(
           context: context,
           builder: (BuildContext context) {
             return SimpleDialog(
@@ -298,22 +430,27 @@ class _HatcheryMortalityActivityScreenState
                 )
               ],
             );
-          },
-        );
-      }
+          });
     }
   }
 
   //clear form
   void _clearForm() {
     _dateController.clear();
-    _selectedDepartment = null;
     _selectedDivision = null;
     _selectedTankCode = null;
     _larvaeCountController.clear();
     _countMultiplierController.clear();
     _totalCountController.clear();
     _notesController.clear();
+  }
+
+  //cancel update
+  void _cancelUpdate() {
+    setState(() {
+      _isEditing = false;
+    });
+    _clearForm();
   }
 
   @override
@@ -377,6 +514,62 @@ class _HatcheryMortalityActivityScreenState
                   style: const TextStyle(
                       fontSize: 15, fontWeight: FontWeight.bold),
                 ),
+              ],
+            ),
+            const SizedBox(height: 10),
+
+            //View and Add Button Row
+            Row(
+              mainAxisAlignment: MainAxisAlignment.start,
+              children: [
+                _isEditing
+                    ? ElevatedButton(
+                        style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.green,
+                            minimumSize: Size(200, 50),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(5.0),
+                            )),
+                        onPressed: _cancelUpdate,
+                        child: const Wrap(
+                          children: [
+                            Text(
+                              "Add Hatchery Mortality Record",
+                              style: TextStyle(color: Colors.white),
+                            ),
+                            SizedBox(width: 10),
+                            Icon(Icons.add, color: Colors.white)
+                          ],
+                        ),
+                      )
+                    : ElevatedButton(
+                        style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.green,
+                            minimumSize: Size(200, 50),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(5.0),
+                            )),
+                        onPressed: () {
+                          Navigator.of(context).push(
+                            MaterialPageRoute(
+                              builder: (context) {
+                                return HatcheryMortalityView();
+                              },
+                            ),
+                          );
+                        },
+                        child: const Wrap(
+                          children: [
+                            Text(
+                              "View Hatchery Mortality Records",
+                              style: TextStyle(color: Colors.white),
+                            ),
+                            SizedBox(width: 10),
+                            Icon(Icons.remove_red_eye_outlined,
+                                color: Colors.white)
+                          ],
+                        ),
+                      ),
               ],
             ),
             const SizedBox(height: 10),
@@ -600,29 +793,68 @@ class _HatcheryMortalityActivityScreenState
             SizedBox(height: 10),
 
             // Submit Button
-            Row(
-              mainAxisAlignment: MainAxisAlignment.end,
-              children: [
-                ElevatedButton(
-                  style: ElevatedButton.styleFrom(
-                    minimumSize: const Size(200, 50),
-                    backgroundColor: Colors.blue,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(5.0),
-                    ),
-                  ),
-                  onPressed: () {
-                    if (_formKey.currentState!.validate()) {
-                      _submitForm();
-                    }
-                  },
-                  child: const Text(
-                    'Submit',
-                    style: TextStyle(color: Colors.white),
-                  ),
-                ),
-              ],
-            ),
+            _isEditing
+                ? Row(
+                    mainAxisAlignment: MainAxisAlignment.end,
+                    children: [
+                      ElevatedButton(
+                        style: ElevatedButton.styleFrom(
+                          minimumSize: Size(200, 50),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(5.0),
+                          ),
+                          backgroundColor: Colors.blue,
+                        ),
+                        onPressed: () {
+                          if (_formKey.currentState!.validate()) {
+                            _showConfirmationDialog(purpose: "Update");
+                          }
+                        },
+                        child: const Text('Update',
+                            style: TextStyle(
+                                fontWeight: FontWeight.bold,
+                                color: Colors.white)),
+                      ),
+                      SizedBox(width: 10),
+                      ElevatedButton(
+                        style: ElevatedButton.styleFrom(
+                          minimumSize: Size(200, 50),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(5.0),
+                          ),
+                          backgroundColor: Colors.red,
+                        ),
+                        onPressed: _cancelUpdate,
+                        child: const Text('Cancel',
+                            style: TextStyle(
+                                fontWeight: FontWeight.bold,
+                                color: Colors.white)),
+                      ),
+                    ],
+                  )
+                : Row(
+                    mainAxisAlignment: MainAxisAlignment.end,
+                    children: [
+                      ElevatedButton(
+                        style: ElevatedButton.styleFrom(
+                          minimumSize: Size(200, 50),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(5.0),
+                          ),
+                          backgroundColor: Colors.blue,
+                        ),
+                        onPressed: () {
+                          if (_formKey.currentState!.validate()) {
+                            _showConfirmationDialog(purpose: "Submit");
+                          }
+                        },
+                        child: const Text('Submit',
+                            style: TextStyle(
+                                fontWeight: FontWeight.bold,
+                                color: Colors.white)),
+                      ),
+                    ],
+                  )
           ]),
         ),
       ),
@@ -645,6 +877,64 @@ class _HatcheryMortalityActivityScreenState
                   style: const TextStyle(
                       fontSize: 15, fontWeight: FontWeight.bold),
                 ),
+              ],
+            ),
+            const SizedBox(height: 10),
+
+            //View and Add Button Row
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                _isEditing
+                    ? ElevatedButton(
+                        style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.green,
+                            minimumSize: Size(200, 50),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(5.0),
+                            )),
+                        onPressed: () {
+                          _cancelUpdate();
+                        },
+                        child: const Wrap(
+                          children: [
+                            Text(
+                              "Add Hatchery Mortality Record",
+                              style: TextStyle(color: Colors.white),
+                            ),
+                            SizedBox(width: 10),
+                            Icon(Icons.add, color: Colors.white)
+                          ],
+                        ),
+                      )
+                    : ElevatedButton(
+                        style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.green,
+                            minimumSize: Size(200, 50),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(5.0),
+                            )),
+                        onPressed: () {
+                          Navigator.of(context).push(
+                            MaterialPageRoute(
+                              builder: (context) {
+                                return HatcheryMortalityView();
+                              },
+                            ),
+                          );
+                        },
+                        child: const Wrap(
+                          children: [
+                            Text(
+                              "View Hatchery Mortality Records",
+                              style: TextStyle(color: Colors.white),
+                            ),
+                            SizedBox(width: 10),
+                            Icon(Icons.remove_red_eye_outlined,
+                                color: Colors.white)
+                          ],
+                        ),
+                      ),
               ],
             ),
             const SizedBox(height: 10),
@@ -841,25 +1131,64 @@ class _HatcheryMortalityActivityScreenState
             ),
             SizedBox(height: 10),
 
-            // Submit Button
-            ElevatedButton(
-              style: ElevatedButton.styleFrom(
-                minimumSize: const Size(double.infinity, 50),
-                backgroundColor: Colors.blue,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(5.0),
-                ),
-              ),
-              onPressed: () {
-                if (_formKey.currentState!.validate()) {
-                  _submitForm();
-                }
-              },
-              child: const Text(
-                'Submit',
-                style: TextStyle(color: Colors.white),
-              ),
-            ),
+            // Submit and Update Button
+            _isEditing
+                ? Row(
+                    children: [
+                      Expanded(
+                        child: ElevatedButton(
+                          style: ElevatedButton.styleFrom(
+                            minimumSize: const Size(double.infinity, 50),
+                            backgroundColor: Colors.blue,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(5.0),
+                            ),
+                          ),
+                          onPressed: () {
+                            if (_formKey.currentState!.validate()) {
+                              _showConfirmationDialog(purpose: "Update");
+                            }
+                          },
+                          child: const Text(
+                            'Update',
+                            style: TextStyle(color: Colors.white),
+                          ),
+                        ),
+                      ),
+                      SizedBox(width: 10),
+                      Expanded(
+                          child: ElevatedButton(
+                        style: ElevatedButton.styleFrom(
+                          minimumSize: const Size(double.infinity, 50),
+                          backgroundColor: Colors.red,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(5.0),
+                          ),
+                        ),
+                        onPressed: () {
+                          _cancelUpdate();
+                        },
+                        child: const Text('Cancel',
+                            style: TextStyle(color: Colors.white)),
+                      ))
+                    ],
+                  )
+                : ElevatedButton(
+                    style: ElevatedButton.styleFrom(
+                      minimumSize: const Size(double.infinity, 50),
+                      backgroundColor: Colors.blue,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(5.0),
+                      ),
+                    ),
+                    onPressed: () {
+                      if (_formKey.currentState!.validate()) {
+                        _showConfirmationDialog(purpose: "Submit");
+                      }
+                    },
+                    child: const Text('Submit',
+                        style: TextStyle(color: Colors.white)),
+                  ),
           ]),
         ),
       ),

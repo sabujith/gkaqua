@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:gk_aqua/models/department.dart';
 import 'package:gk_aqua/models/division.dart';
 import 'package:gk_aqua/models/tank.dart';
+import 'package:gk_aqua/screens/activities/LarvaeCollectionViewScreen.dart';
 import 'package:gk_aqua/services/api_department.dart';
 import 'package:gk_aqua/services/division_services.dart';
 import 'package:gk_aqua/services/larvaeCollection_services.dart';
@@ -19,7 +20,11 @@ class LarvaeCollection extends StatelessWidget {
 }
 
 class LarvaeCollectionActivityScreen extends StatefulWidget {
-  const LarvaeCollectionActivityScreen({super.key});
+  final Map<String, dynamic>? larvaeData;
+  final bool isEditing;
+
+  const LarvaeCollectionActivityScreen(
+      {super.key, this.larvaeData, this.isEditing = false});
 
   @override
   State<LarvaeCollectionActivityScreen> createState() =>
@@ -67,12 +72,7 @@ class _LarvaeCollectionActivityScreenState
   List<TankModel> targetTanks = [];
 
   bool _isLoading = false;
-
-  void _getUserDetails() async {
-    setState(() {
-      _userId = "user123";
-    });
-  }
+  bool isEditing = false;
 
   initState() {
     super.initState();
@@ -87,11 +87,102 @@ class _LarvaeCollectionActivityScreenState
     setState(() {
       _isLoading = true;
     });
+    await _getUserDetails();
     await _getDepartments();
     await _getDivisions();
     await _getTanks();
+    await _initializeData();
     setState(() {
       _isLoading = false;
+    });
+  }
+
+  Future<void> _initializeData() async {
+    setState(() {
+      if (widget.isEditing && widget.larvaeData != null) {
+        isEditing = true;
+        _dateController.text = widget.larvaeData!['date'];
+        _selectedHatching1Department =
+            hatching1Departments.fold(null, (previousValue, element) {
+          if (element.id == widget.larvaeData!['hatching1_department_id']) {
+            return element;
+          }
+          return previousValue;
+        });
+        _selectedHatching1Division =
+            hatching1Divisions.fold(null, (previousValue, element) {
+          if (element.id == widget.larvaeData!['hatching1_division_id']) {
+            return element;
+          }
+          return previousValue;
+        });
+        _selectedHatching1Tank =
+            hatching1Tanks.fold(null, (previousValue, element) {
+          if (element.id == widget.larvaeData!['hatching1_tank_id']) {
+            return element;
+          }
+          return previousValue;
+        });
+        _hatching1BatchController.text = widget.larvaeData!['hatching1_batch'];
+        _selectedHatching2Department =
+            hatching2Departments.fold(null, (previousValue, element) {
+          if (element.id == widget.larvaeData!['hatching2_department_id']) {
+            return element;
+          }
+          return previousValue;
+        });
+        _selectedHatching2Division =
+            hatching2Divisions.fold(null, (previousValue, element) {
+          if (element.id == widget.larvaeData!['hatching2_division_id']) {
+            return element;
+          }
+          return previousValue;
+        });
+        _selectedHatching2Tank =
+            hatching2Tanks.fold(null, (previousValue, element) {
+          if (element.id == widget.larvaeData!['hatching2_tank_id']) {
+            return element;
+          }
+          return previousValue;
+        });
+        _hatching2BatchController.text = widget.larvaeData!['hatching2_batch'];
+        _selectedTargetDepartment =
+            targetDepartments.fold(null, (previousValue, element) {
+          if (element.id == widget.larvaeData!['target_department_id']) {
+            return element;
+          }
+          return previousValue;
+        });
+        _selectedTargetDivision =
+            targetDivisions.fold(null, (previousValue, element) {
+          if (element.id == widget.larvaeData!['target_division_id']) {
+            return element;
+          }
+          return previousValue;
+        });
+        _selectedTargetTank = targetTanks.fold(null, (previousValue, element) {
+          if (element.id == widget.larvaeData!['target_tank_id']) {
+            return element;
+          }
+          return previousValue;
+        });
+        _targetBatchController.text = widget.larvaeData!['target_batch'];
+        _countController.text = widget.larvaeData!['count'].toString();
+        _countMuliplierController.text =
+            widget.larvaeData!['count_multiplier'].toString();
+        _totalCountController.text =
+            widget.larvaeData!['total_count'].toString();
+        _noteController.text = widget.larvaeData!['notes'] ?? '';
+      } else {
+        isEditing = false;
+      }
+    });
+  }
+
+  //Get user Details
+  Future<void> _getUserDetails() async {
+    setState(() {
+      _userId = "user123";
     });
   }
 
@@ -346,9 +437,151 @@ class _LarvaeCollectionActivityScreenState
     }
   }
 
+//confirmation dialog
+  void _showConfirmationDialog({required String purpose, int? index}) {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: Text('$purpose Confirmation'),
+          content: Text('Are you sure you want to $purpose the Data?'),
+          actions: <Widget>[
+            TextButton(
+              child: Text('$purpose'),
+              onPressed: () {
+                if (purpose == 'Submit') {
+                  _submitForm();
+                } else if (purpose == 'Update') {
+                  _updateLarvaeCollection();
+                }
+                Navigator.of(context).pop();
+              },
+            ),
+            TextButton(
+              child: const Text(
+                'Cancel',
+                style: TextStyle(color: Colors.red),
+              ),
+              onPressed: () {
+                Navigator.of(context).pop();
+              },
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  //update
+  void _updateLarvaeCollection() async {
+    int? id = widget.larvaeData!['id'];
+    String? date = _dateController.text;
+    String? employee_code = _userId;
+    int? hatching1Departments = _selectedHatching1Department!.id;
+    int? hatching1Divisions = _selectedHatching1Division!.id;
+    int? hatching1Tanks = _selectedHatching1Tank!.id;
+    String? hatching1Batch = _hatching1BatchController.text;
+    int? hatching2Departments = _selectedHatching2Department!.id;
+    int? hatching2Divisions = _selectedHatching2Division!.id;
+    int? hatching2Tanks = _selectedHatching2Tank!.id;
+    String? hatching2Batch = _hatching2BatchController.text;
+    int? targetDepartments = _selectedTargetDepartment!.id;
+    int? targetDivisions = _selectedTargetDivision!.id;
+    int? targetTanks = _selectedTargetTank!.id;
+    String? targetBatch = _targetBatchController.text;
+    int? count = int.parse(_countController.text);
+    int? countMultiplier = int.parse(_countMuliplierController.text);
+    int? totalCount = int.parse(_totalCountController.text);
+    String? notes = _noteController.text;
+
+    Map<String, dynamic> requestData = {
+      'id': id,
+      'employee_code': employee_code,
+      'date': date,
+      'hatching1_department_id': hatching1Departments,
+      'hatching1_division_id': hatching1Divisions,
+      'hatching1_tank_id': hatching1Tanks,
+      'hatching1_batch': hatching1Batch,
+      'hatching2_department_id': hatching2Departments,
+      'hatching2_division_id': hatching2Divisions,
+      'hatching2_tank_id': hatching2Tanks,
+      'hatching2_batch': hatching2Batch,
+      'target_department_id': targetDepartments,
+      'target_division_id': targetDivisions,
+      'target_tank_id': targetTanks,
+      'target_batch': targetBatch,
+      'count': count,
+      'count_multiplier': countMultiplier,
+      'total_count': totalCount,
+      'notes': notes,
+    };
+
+    try {
+      var response = await LarvaeCollectionService()
+          .updateLarvaeCollectionTank(requestData, id!);
+
+      if (response.statusCode == 200) {
+        setState(() {
+          isEditing = false;
+        });
+        _clearForm();
+        showDialog(
+          context: context,
+          builder: (context) => AlertDialog(
+            title: const Text('Success'),
+            content: const Text('Larvae Collection updated successfully!'),
+          ),
+        );
+      } else {
+        throw 'Failed to update larvae collection.';
+      }
+    } catch (e) {
+      showDialog(
+        context: context,
+        builder: (BuildContext context) {
+          return SimpleDialog(
+            title: const Text('Error'),
+            children: [
+              SimpleDialogOption(
+                onPressed: () {
+                  Navigator.pop(context);
+                },
+                child: Text('Error in updating larvae collection: $e'),
+              ),
+            ],
+          );
+        },
+      );
+    }
+  }
+
+  //cancel update
+  void _cancelUpdate() {
+    setState(() {
+      isEditing = false;
+    });
+    _clearForm();
+  }
+
   //clear form
   void _clearForm() {
-    _formKey.currentState!.reset();
+    _dateController.clear();
+    _selectedHatching1Department = null;
+    _selectedHatching1Division = null;
+    _selectedHatching1Tank = null;
+    _hatching1BatchController.clear();
+    _selectedHatching2Department = null;
+    _selectedHatching2Division = null;
+    _selectedHatching2Tank = null;
+    _hatching2BatchController.clear();
+    _selectedTargetDepartment = null;
+    _selectedTargetDivision = null;
+    _selectedTargetTank = null;
+    _targetBatchController.clear();
+    _countController.clear();
+    _countMuliplierController.clear();
+    _totalCountController.clear();
+    _noteController.clear();
   }
 
   @override
@@ -412,6 +645,67 @@ class _LarvaeCollectionActivityScreenState
               ),
               const SizedBox(height: 10),
 
+              //Navigation Button
+              Row(
+                mainAxisAlignment: MainAxisAlignment.start,
+                children: [
+                  isEditing
+                      ? ElevatedButton(
+                          style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.green,
+                              minimumSize: Size(200, 50),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(5.0),
+                              )),
+                          onPressed: () {
+                            setState(() {
+                              isEditing = false;
+                            });
+                            _clearForm();
+                          },
+                          child: const Wrap(
+                            children: [
+                              Text(
+                                "Add Larvae Collection",
+                                style: TextStyle(color: Colors.white),
+                              ),
+                              SizedBox(width: 10),
+                              Icon(Icons.add, color: Colors.white)
+                            ],
+                          ),
+                        )
+                      : ElevatedButton(
+                          style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.green,
+                              minimumSize: Size(200, 50),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(5.0),
+                              )),
+                          onPressed: () {
+                            Navigator.of(context).push(
+                              MaterialPageRoute(
+                                builder: (context) {
+                                  return LarvaeCollectionView();
+                                },
+                              ),
+                            );
+                          },
+                          child: const Wrap(
+                            children: [
+                              Text(
+                                "View Larvae Collection Details",
+                                style: TextStyle(color: Colors.white),
+                              ),
+                              SizedBox(width: 10),
+                              Icon(Icons.remove_red_eye_outlined,
+                                  color: Colors.white)
+                            ],
+                          ),
+                        ),
+                ],
+              ),
+              SizedBox(height: 10),
+
               //Date Row
               Row(
                 mainAxisAlignment: MainAxisAlignment.start,
@@ -434,7 +728,7 @@ class _LarvaeCollectionActivityScreenState
                       onTap: () => _selectDate(context, _dateController),
                     ),
                   ),
-                  Expanded(
+                  const Expanded(
                     flex: 2,
                     child: SizedBox(width: 10),
                   ),
@@ -950,29 +1244,68 @@ class _LarvaeCollectionActivityScreenState
               const SizedBox(height: 10),
 
               //submit button
-              Row(
-                mainAxisAlignment: MainAxisAlignment.end,
-                children: [
-                  ElevatedButton(
-                    style: ElevatedButton.styleFrom(
-                      minimumSize: const Size(200, 50),
-                      backgroundColor: Colors.blue,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(5.0),
-                      ),
+              isEditing
+                  ? Row(
+                      mainAxisAlignment: MainAxisAlignment.end,
+                      children: [
+                        ElevatedButton(
+                          style: ElevatedButton.styleFrom(
+                            minimumSize: Size(200, 50),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(5.0),
+                            ),
+                            backgroundColor: Colors.blue,
+                          ),
+                          onPressed: () {
+                            if (_formKey.currentState!.validate()) {
+                              _showConfirmationDialog(purpose: "Update");
+                            }
+                          },
+                          child: const Text('Update',
+                              style: TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.white)),
+                        ),
+                        SizedBox(width: 10),
+                        ElevatedButton(
+                          style: ElevatedButton.styleFrom(
+                            minimumSize: Size(200, 50),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(5.0),
+                            ),
+                            backgroundColor: Colors.red,
+                          ),
+                          onPressed: _cancelUpdate,
+                          child: const Text('Cancel',
+                              style: TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.white)),
+                        ),
+                      ],
+                    )
+                  : Row(
+                      mainAxisAlignment: MainAxisAlignment.end,
+                      children: [
+                        ElevatedButton(
+                          style: ElevatedButton.styleFrom(
+                            minimumSize: const Size(200, 50),
+                            backgroundColor: Colors.blue,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(5.0),
+                            ),
+                          ),
+                          onPressed: () {
+                            if (_formKey.currentState!.validate()) {
+                              _submitForm();
+                            }
+                          },
+                          child: const Text(
+                            'Submit',
+                            style: TextStyle(color: Colors.white),
+                          ),
+                        ),
+                      ],
                     ),
-                    onPressed: () {
-                      if (_formKey.currentState!.validate()) {
-                        _submitForm();
-                      }
-                    },
-                    child: const Text(
-                      'Submit',
-                      style: TextStyle(color: Colors.white),
-                    ),
-                  ),
-                ],
-              ),
             ],
           ),
         ),

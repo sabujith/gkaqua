@@ -53,7 +53,8 @@ class HatcheryMortalityService {
   }
 
   //Update Hatchery Mortality
-  Future<void> updateMortality(Map<String, dynamic> requestData, int id) async {
+  Future<http.Response> updateMortality(
+      Map<String, dynamic> requestData, int id) async {
     var url = Uri.parse('$apiUrl/$id');
     try {
       var response = await http.put(
@@ -61,22 +62,18 @@ class HatcheryMortalityService {
         headers: {"Content-Type": "application/json"},
         body: jsonEncode(requestData),
       );
-      if (response.statusCode != 200) {
-        throw Exception('Failed to update Hatchery Mortality');
-      }
+      return response;
     } catch (error) {
       throw Exception('Failed to connect to API: $error');
     }
   }
 
   //Delete Hatchery Mortality
-  Future<void> deleteMortality(int id) async {
+  Future<http.Response> deleteMortality(int id) async {
     var url = Uri.parse('$apiUrl/$id');
     try {
       var response = await http.delete(url);
-      if (response.statusCode != 204) {
-        throw Exception('Failed to delete Hatchery Mortality');
-      }
+      return response;
     } catch (error) {
       throw Exception('Failed to connect to API: $error');
     }

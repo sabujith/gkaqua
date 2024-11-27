@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:gk_aqua/models/department.dart';
+import 'package:gk_aqua/models/employee.dart';
 import 'package:gk_aqua/screens/masters/employeeViewMasterScreen.dart';
 import 'package:gk_aqua/services/api_department.dart';
 import 'package:gk_aqua/services/employee_services.dart';
@@ -636,7 +637,7 @@ class _EmployeeAddState extends State<EmployeeAdd> {
                   }
                   return null;
                 },
-                decoration:const InputDecoration(
+                decoration: const InputDecoration(
                     border: const OutlineInputBorder(),
                     suffixIcon: Icon(Icons.calendar_today),
                     labelText: 'End Date'),
@@ -757,7 +758,7 @@ class _EmployeeAddState extends State<EmployeeAdd> {
                                 ),
                               );
                             },
-                            child:const Wrap(
+                            child: const Wrap(
                               children: [
                                 Text(
                                   "View Employees",
@@ -1077,10 +1078,67 @@ class _EmployeeAddState extends State<EmployeeAdd> {
                                     color: Colors.white)),
                           ),
                         ],
-                      )
+                      ),
+                      const SizedBox(height: 20),
+
+                      
               ],
             )),
       ),
     );
   }
+}
+
+class EmployeeDataSource extends DataTableSource {
+  final List<EmployeeModel> employees;
+  final bool isAdmin;
+  final void Function(EmployeeModel) onEdit;
+  final void Function(int) onDelete;
+
+  EmployeeDataSource(
+      {required this.employees,
+      required this.isAdmin,
+      required this.onEdit,
+      required this.onDelete});
+
+  @override
+  DataRow? getRow(int index) {
+    final employee = employees[index];
+    return DataRow(cells: [
+      DataCell(Text(employee.name, overflow: TextOverflow.ellipsis)),
+      DataCell(Text(employee.employee_code, overflow: TextOverflow.ellipsis)),
+      DataCell(Text(employee.mobile, overflow: TextOverflow.ellipsis)),
+      DataCell(Text(employee.department_id, overflow: TextOverflow.ellipsis)),
+      DataCell(
+          Text(employee.mycad_or_passport_no, overflow: TextOverflow.ellipsis)),
+      DataCell(
+        Row(
+          children: [
+            IconButton(
+                onPressed: () {
+                  onEdit(employee);
+                },
+                icon: Icon(Icons.edit)),
+            isAdmin
+                ? IconButton(
+                    icon: const Icon(Icons.delete),
+                    onPressed: () {
+                      onDelete(index);
+                    },
+                  )
+                : SizedBox(width: 0),
+          ],
+        ),
+      ),
+    ]);
+  }
+
+  @override
+  bool get isRowCountApproximate => false;
+
+  @override
+  int get rowCount => employees.length;
+
+  @override
+  int get selectedRowCount => 0;
 }
