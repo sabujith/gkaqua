@@ -3,34 +3,35 @@ import 'package:gk_aqua/models/department.dart';
 import 'package:gk_aqua/models/division.dart';
 import 'package:gk_aqua/models/tank.dart';
 import 'package:gk_aqua/models/waterParameter.dart';
-import 'package:gk_aqua/screens/activities/WaterQualityActivityView.dart';
+import 'package:gk_aqua/screens/activities/WaterQualityActivityScreen.dart';
 import 'package:gk_aqua/services/api_department.dart';
 import 'package:gk_aqua/services/division_services.dart';
 import 'package:gk_aqua/services/tank_services.dart';
 import 'package:gk_aqua/services/waterParameter_services.dart';
 import 'package:gk_aqua/services/waterQuality_services.dart';
 
-class WaterQuality extends StatelessWidget {
-  const WaterQuality({super.key});
+class WaterQualityUpdate extends StatelessWidget {
+  const WaterQualityUpdate({super.key});
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: WaterqualityActivityScreen(),
+      body: WaterQualityActivityUpdateScreen(),
     );
   }
 }
 
-class WaterqualityActivityScreen extends StatefulWidget {
-  const WaterqualityActivityScreen({super.key});
+class WaterQualityActivityUpdateScreen extends StatefulWidget {
+  final Map<String, dynamic>? WaterQualityData;
+  const WaterQualityActivityUpdateScreen({super.key, this.WaterQualityData});
 
   @override
-  State<WaterqualityActivityScreen> createState() =>
-      _WaterqualityActivityScreenState();
+  State<WaterQualityActivityUpdateScreen> createState() =>
+      _WaterQualityActivityUpdateScreenState();
 }
 
-class _WaterqualityActivityScreenState
-    extends State<WaterqualityActivityScreen> {
+class _WaterQualityActivityUpdateScreenState
+    extends State<WaterQualityActivityUpdateScreen> {
   final _formKey = GlobalKey<FormState>();
   String? _userId;
   final TextEditingController _dateController = TextEditingController();
@@ -43,6 +44,9 @@ class _WaterqualityActivityScreenState
   List<DivisionModel> divisions = [];
   List<TankModel> tanks = [];
   List<waterParameterModel> waterparameters = [];
+  waterParameterModel? _selectedWaterParameter;
+  String? _selectedWaterParameterUnit;
+  final TextEditingController _inputValueController = TextEditingController();
   Map<int, TextEditingController> parameterControllers = {};
 
   bool _isLoading = false;
@@ -51,28 +55,29 @@ class _WaterqualityActivityScreenState
   void initState() {
     // TODO: implement initState
     super.initState();
-    _getUserDetails();
     _fetchData();
   }
 
-  //fetch datas
   void _fetchData() async {
     setState(() {
       _isLoading = true;
     });
+
+    await _getUserDetails();
     await _getDepartments();
     await _getDivisions();
     await _getTanks();
     await _getWaterParameters();
+    await _initializeData();
+
     setState(() {
       _isLoading = false;
     });
   }
 
-  //Get user details
-  void _getUserDetails() async {
+  Future<void> _getUserDetails() async {
     setState(() {
-      _userId = "user123";
+      _userId = 'user123';
     });
   }
 
@@ -240,114 +245,50 @@ class _WaterqualityActivityScreenState
     }
   }
 
-  // Submit form
-  Future<void> _submitForm() async {
-    if (!_formKey.currentState!.validate()) {
-      return;
-    }
-
-    // Collect date, user ID, department, division, and tank information
-    String checkDate = _dateController.text;
-    String employeeCode = _userId ?? '';
-    int? departmentId = _selectedDepartment?.id;
-    int? divisionId = _selectedDivision?.id;
-    int? tankId = _selectedTank?.id;
-    String? notes = _notesController.text;
-
-    if (departmentId == null || divisionId == null || tankId == null) {
-      // Show error message if any required field is missing
-      return;
-    }
-
-    // Collect input values for each parameter
-    List<Map<String, dynamic>> records = [];
-    for (var parameter in waterparameters) {
-      var inputController = parameterControllers[parameter.id];
-      String inputValue = inputController?.text ?? '';
-
-      records.add({
-        "check_date": checkDate,
-        "employee_code": employeeCode,
-        "department_id": departmentId,
-        "division_id": divisionId,
-        "tank_id": tankId,
-        "notes": notes,
-        "water_parameter_id": parameter.id,
-        "input_value": double.tryParse(inputValue) ?? 0.0,
-      });
-    }
-
-    // Wrap the records in a map with a key "records"
-    Map<String, dynamic> requestData = {
-      "records": records,
-    };
-
-    try {
-      WaterqualityServices waterParameterService = WaterqualityServices();
-      var response =
-          await waterParameterService.createWaterQualityCheck(requestData);
-      // print(requestData);
-
-      if (response.statusCode == 201) {
-        // Handle successful response
-        showDialog(
-          context: context,
-          builder: (BuildContext context) {
-            return AlertDialog(
-              title: Text("Success"),
-              content: Text("Water parameters submitted successfully!"),
-              actions: [
-                TextButton(
-                  onPressed: () {
-                    Navigator.pop(context);
-                  },
-                  child: Text("OK"),
-                ),
-              ],
-            );
-          },
-        );
-
-        _clearForm();
-      } else {
-        throw 'Failed to submit water parameters';
-      }
-    } catch (error) {
-      showDialog(
-        context: context,
-        builder: (BuildContext context) {
-          return AlertDialog(
-            title: Text("Submission Failed"),
-            content: Text("Something went wrong: $error"),
-            actions: [
-              TextButton(
-                onPressed: () {
-                  Navigator.pop(context);
-                },
-                child: Text("OK"),
-              ),
-            ],
-          );
-        },
-      );
-    }
-  }
-
-  //clear form
-  void _clearForm() {
-    _dateController.clear();
-    _selectedDepartment = null;
-    _selectedDivision = null;
-    _selectedTank = null;
-    _notesController.clear();
+//Initialize data
+  Future<void> _initializeData() async {
     setState(() {
-      for (var parameter in waterparameters) {
-        parameterControllers[parameter.id!] = TextEditingController();
-      }
+      _dateController.text = widget.WaterQualityData!['check_date'].toString();
+      _selectedDepartment = departments.fold(null, (previousValue, element) {
+        if (element.id == widget.WaterQualityData!['department_id']) {
+          return element;
+        }
+        return previousValue;
+      });
+
+      _selectedDivision = divisions.fold(null, (previousValue, element) {
+        if (element.id == widget.WaterQualityData!['division_id']) {
+          return element;
+        }
+        return previousValue;
+      });
+
+      _selectedTank = tanks.fold(null, (previousValue, element) {
+        if (element.id == widget.WaterQualityData!['tank_id']) {
+          return element;
+        }
+        return previousValue;
+      });
+
+      _selectedWaterParameter =
+          waterparameters.fold(null, (previousValue, element) {
+        if (element.id == widget.WaterQualityData!['water_parameter_id']) {
+          return element;
+        }
+
+        _selectedWaterParameterUnit =
+            _selectedWaterParameter?.unit?.unit_name ?? "Unit";
+
+        _inputValueController.text = widget.WaterQualityData!['input_value'];
+
+        return previousValue;
+      });
+
+      _notesController.text = widget.WaterQualityData!['notes'] ?? '';
     });
   }
 
-  //confirmation dialog
+//confirmation dialog
   void _showConfirmationDialog({required String purpose}) {
     showDialog(
       context: context,
@@ -359,8 +300,8 @@ class _WaterqualityActivityScreenState
             TextButton(
               child: Text('$purpose'),
               onPressed: () {
-                if (purpose == 'Submit') {
-                  _submitForm();
+                if (purpose == 'Update') {
+                  _updateWaterQuality();
                 }
                 Navigator.of(context).pop();
               },
@@ -380,57 +321,136 @@ class _WaterqualityActivityScreenState
     );
   }
 
+//Update water quality
+  void _updateWaterQuality() async {
+    int id = widget.WaterQualityData!['id'];
+    String date = _dateController.text;
+    int departmentId = _selectedDepartment!.id;
+    int divisionId = _selectedDivision!.id!;
+    int tankId = _selectedTank!.id!;
+    int waterParameterId = _selectedWaterParameter!.id!;
+    String inputValue = _inputValueController.text;
+    String notes = _notesController.text;
+
+    Map<String, dynamic> requestBody = {
+      'id': id,
+      'check_date': date,
+      'employee_code': _userId,
+      'department_id': departmentId,
+      'division_id': divisionId,
+      'tank_id': tankId,
+      'water_parameter_id': waterParameterId,
+      'input_value': inputValue,
+      'notes': notes
+    };
+
+    try {
+      await WaterqualityServices().updateWaterQualityCheck(id, requestBody);
+      showDialog(
+        context: context,
+        builder: (BuildContext context) {
+          return SimpleDialog(
+            title: const Text('Success'),
+            children: [
+              SimpleDialogOption(
+                onPressed: () {
+                  Navigator.pop(context); // Close the dialog
+                },
+                child: const Text('Data updated successfully!'),
+              ),
+            ],
+          );
+        },
+      );
+      _cancelUpdate();
+    } catch (e) {
+      showDialog(
+          context: context,
+          builder: (BuildContext context) {
+            return SimpleDialog(
+              title: const Text('Error'),
+              children: [
+                SimpleDialogOption(
+                  onPressed: () {
+                    Navigator.pop(context); // Close the dialog
+                  },
+                  child: Text('Something went wrong \n$e'),
+                ),
+              ],
+            );
+          });
+    }
+  }
+
+  //Cancel Update
+  void _cancelUpdate() {
+    setState(() {
+      _dateController.clear();
+      _selectedDepartment = null;
+      _selectedDivision = null;
+      _selectedTank = null;
+      _selectedWaterParameter = null;
+      _inputValueController.clear();
+      _notesController.clear();
+    });
+
+    Navigator.pop(context);
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-        appBar: AppBar(
-          backgroundColor: Colors.blue,
-          leading: IconButton(
-            onPressed: () {
-              Navigator.of(context).pop();
-            },
-            icon: const Icon(
-              Icons.menu,
-              color: Colors.white,
-            ),
+      appBar: AppBar(
+        backgroundColor: Colors.blue,
+        leading: IconButton(
+          onPressed: () {
+            Navigator.of(context).pop();
+          },
+          icon: const Icon(
+            Icons.menu,
+            color: Colors.white,
           ),
-          title: const Text(
-            'Activity/Water Quality Check',
-            style: TextStyle(color: Colors.white),
-          ),
-          actions: const [
-            Padding(
-              padding: EdgeInsets.all(8.0),
-              child: Icon(
-                Icons.account_circle,
-                color: Colors.white,
-                size: 30,
-              ),
-            )
-          ],
         ),
-        body: _isLoading
-            ? const Center(child: CircularProgressIndicator())
-            : LayoutBuilder(builder: (context, constraints) {
+        title: const Text(
+          'Activity/Water Quality Update',
+          style: TextStyle(color: Colors.white),
+        ),
+        actions: const [
+          Padding(
+            padding: EdgeInsets.all(8.0),
+            child: Icon(
+              Icons.account_circle,
+              color: Colors.white,
+              size: 30,
+            ),
+          )
+        ],
+      ),
+      body: _isLoading
+          ? const Center(child: CircularProgressIndicator())
+          : LayoutBuilder(
+              builder: (context, constraints) {
                 if (constraints.maxWidth > 600) {
                   return _desktopView();
                 } else {
                   return _mobileView();
                 }
-              }));
+              },
+            ),
+    );
   }
 
   Widget _desktopView() {
-    return SingleChildScrollView(
-      child: Padding(
-        padding: const EdgeInsets.all(8.0),
+    return Padding(
+      padding: const EdgeInsets.all(10.0),
+      child: SingleChildScrollView(
         child: Form(
           key: _formKey,
           child: Column(
             children: [
-              //User Id
+              //User Id Row
               Row(
-                mainAxisAlignment: MainAxisAlignment.center,
+                mainAxisAlignment: MainAxisAlignment.start,
                 children: [
                   Text(
                     'User Id : ${_userId}',
@@ -441,6 +461,7 @@ class _WaterqualityActivityScreenState
               ),
               const SizedBox(height: 10),
 
+              //View collection button
               Row(
                 mainAxisAlignment: MainAxisAlignment.start,
                 children: [
@@ -455,7 +476,7 @@ class _WaterqualityActivityScreenState
                       Navigator.of(context).push(
                         MaterialPageRoute(
                           builder: (context) {
-                            return WaterQualityActivityView();
+                            return WaterQuality();
                           },
                         ),
                       );
@@ -463,11 +484,11 @@ class _WaterqualityActivityScreenState
                     child: const Wrap(
                       children: [
                         Text(
-                          "View Water Quality Check",
+                          "Add New Water Quality Check",
                           style: TextStyle(color: Colors.white),
                         ),
                         SizedBox(width: 10),
-                        Icon(Icons.remove_red_eye_outlined, color: Colors.white)
+                        Icon(Icons.add, color: Colors.white)
                       ],
                     ),
                   ),
@@ -475,7 +496,7 @@ class _WaterqualityActivityScreenState
               ),
               const SizedBox(height: 10),
 
-              //Date and Department
+              //Date and Department Row
               Row(
                 children: [
                   Expanded(
@@ -495,7 +516,7 @@ class _WaterqualityActivityScreenState
                       },
                     ),
                   ),
-                  SizedBox(width: 10),
+                  const SizedBox(width: 10),
 
                   //Department Dropdown
                   Expanded(
@@ -528,12 +549,12 @@ class _WaterqualityActivityScreenState
                   ),
                 ],
               ),
+              const SizedBox(height: 10),
 
-              SizedBox(height: 10),
-
-              //Division Dropdown and Tank Dropdown
+              //Division and Tank Row
               Row(
                 children: [
+                  //Division Dropdown
                   Expanded(
                     child: DropdownButtonFormField<DivisionModel>(
                       value: _selectedDivision,
@@ -563,7 +584,7 @@ class _WaterqualityActivityScreenState
                       },
                     ),
                   ),
-                  SizedBox(width: 10),
+                  const SizedBox(width: 10),
 
                   // Tank Dropdown
                   Expanded(
@@ -592,47 +613,32 @@ class _WaterqualityActivityScreenState
                   ),
                 ],
               ),
+              const SizedBox(height: 10),
 
-              SizedBox(height: 10),
-
-              //Water Parameter Fields
-              Wrap(
+              //Water Parameters Row
+              Row(
                 children: [
-                  ...waterparameters.map((parameter) => Padding(
-                        padding: const EdgeInsets.symmetric(vertical: 8.0),
-                        child: Row(
-                          children: [
-                            Expanded(
-                              child: TextFormField(
-                                initialValue: parameter
-                                    .parameter_name, // Display parameter name
-                                readOnly: true,
-                                decoration: InputDecoration(
-                                  labelText: 'Water Parameter',
-                                  border: OutlineInputBorder(),
-                                ),
-                              ),
-                            ),
-                            const SizedBox(width: 8),
-                            Expanded(
-                              child: TextFormField(
-                                controller: parameterControllers[parameter.id],
-                                decoration: InputDecoration(
-                                  labelText: parameter
-                                      .unit!.unit_name, // Display unit name
-                                  border: OutlineInputBorder(),
-                                ),
-                                validator: (value) {
-                                  if (value == null || value.isEmpty) {
-                                    return 'Please enter a value for ${parameter.unit!.unit_name}';
-                                  }
-                                  return null;
-                                },
-                              ),
-                            ),
-                          ],
-                        ),
-                      )),
+                  Expanded(
+                    child: TextFormField(
+                      initialValue:
+                          _selectedWaterParameter?.parameter_name ?? "",
+                      readOnly: true,
+                      decoration: const InputDecoration(
+                        labelText: 'Water Parameter',
+                        border: OutlineInputBorder(),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: TextFormField(
+                      controller: _inputValueController,
+                      decoration: InputDecoration(
+                        labelText: _selectedWaterParameterUnit,
+                        border: const OutlineInputBorder(),
+                      ),
+                    ),
+                  ),
                 ],
               ),
               const SizedBox(height: 10),
@@ -640,19 +646,15 @@ class _WaterqualityActivityScreenState
               //Notes
               TextFormField(
                 controller: _notesController,
+                maxLines: 5,
                 decoration: const InputDecoration(
                   labelText: 'Notes',
                   border: OutlineInputBorder(),
-                  constraints: BoxConstraints(
-                    minHeight:
-                        50.0, // Adjust this to match TextFormField height
-                  ),
                 ),
-                maxLines: null,
               ),
               const SizedBox(height: 10),
 
-              //Submit Button
+              //Update or Cancel row
               Row(
                 mainAxisAlignment: MainAxisAlignment.end,
                 children: [
@@ -666,16 +668,29 @@ class _WaterqualityActivityScreenState
                     ),
                     onPressed: () {
                       if (_formKey.currentState!.validate()) {
-                        _showConfirmationDialog(purpose: "Submit");
+                        _showConfirmationDialog(purpose: "Update");
                       }
                     },
-                    child: const Text('Submit',
+                    child: const Text('Update',
+                        style: TextStyle(
+                            fontWeight: FontWeight.bold, color: Colors.white)),
+                  ),
+                  SizedBox(width: 10),
+                  ElevatedButton(
+                    style: ElevatedButton.styleFrom(
+                      minimumSize: Size(200, 50),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(5.0),
+                      ),
+                      backgroundColor: Colors.red,
+                    ),
+                    onPressed: _cancelUpdate,
+                    child: const Text('Cancel',
                         style: TextStyle(
                             fontWeight: FontWeight.bold, color: Colors.white)),
                   ),
                 ],
-              ),
-              const SizedBox(height: 20),
+              )
             ],
           ),
         ),
@@ -684,14 +699,14 @@ class _WaterqualityActivityScreenState
   }
 
   Widget _mobileView() {
-    return SingleChildScrollView(
-      child: Padding(
-        padding: const EdgeInsets.all(8.0),
+    return Padding(
+      padding: const EdgeInsets.all(10.0),
+      child: SingleChildScrollView(
         child: Form(
           key: _formKey,
           child: Column(
             children: [
-              //User Id
+              //User Id Row
               Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
@@ -705,37 +720,34 @@ class _WaterqualityActivityScreenState
               const SizedBox(height: 10),
 
               //View collection button
-              Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  ElevatedButton(
-                    style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.green,
-                        minimumSize: Size(200, 50),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(5.0),
-                        )),
-                    onPressed: () {
-                      Navigator.of(context).push(
-                        MaterialPageRoute(
-                          builder: (context) {
-                            return WaterQualityActivityView();
-                          },
-                        ),
-                      );
-                    },
-                    child: const Wrap(
-                      children: [
-                        Text(
-                          "View Water Quality Check",
-                          style: TextStyle(color: Colors.white),
-                        ),
-                        SizedBox(width: 10),
-                        Icon(Icons.remove_red_eye_outlined, color: Colors.white)
-                      ],
-                    ),
+              Center(
+                child: ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.green,
+                      minimumSize: Size(200, 50),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(5.0),
+                      )),
+                  onPressed: () {
+                    Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (context) {
+                          return WaterQuality();
+                        },
+                      ),
+                    );
+                  },
+                  child: const Wrap(
+                    children: [
+                      Text(
+                        "Add New Water Quality Check",
+                        style: TextStyle(color: Colors.white),
+                      ),
+                      SizedBox(width: 10),
+                      Icon(Icons.add, color: Colors.white)
+                    ],
                   ),
-                ],
+                ),
               ),
               const SizedBox(height: 10),
 
@@ -755,7 +767,7 @@ class _WaterqualityActivityScreenState
                   return null;
                 },
               ),
-              SizedBox(height: 10),
+              const SizedBox(height: 10),
 
               //Department Dropdown
               DropdownButtonFormField<Department>(
@@ -784,7 +796,7 @@ class _WaterqualityActivityScreenState
                     }
                     return null;
                   }),
-              SizedBox(height: 10),
+              const SizedBox(height: 10),
 
               //Division Dropdown
               DropdownButtonFormField<DivisionModel>(
@@ -814,7 +826,7 @@ class _WaterqualityActivityScreenState
                   return null;
                 },
               ),
-              SizedBox(height: 10),
+              const SizedBox(height: 10),
 
               // Tank Dropdown
               DropdownButtonFormField<TankModel>(
@@ -839,46 +851,32 @@ class _WaterqualityActivityScreenState
                   return null;
                 },
               ),
-              SizedBox(height: 10),
+              const SizedBox(height: 10),
 
-              //Water Parameter Fields
-              Wrap(
+              //Water Parameters Row
+              Row(
                 children: [
-                  ...waterparameters.map((parameter) => Padding(
-                        padding: const EdgeInsets.symmetric(vertical: 8.0),
-                        child: Row(
-                          children: [
-                            Expanded(
-                              child: TextFormField(
-                                initialValue: parameter
-                                    .parameter_name, // Display parameter name
-                                readOnly: true,
-                                decoration: InputDecoration(
-                                  labelText: 'Water Parameter',
-                                  border: OutlineInputBorder(),
-                                ),
-                              ),
-                            ),
-                            const SizedBox(width: 8),
-                            Expanded(
-                              child: TextFormField(
-                                controller: parameterControllers[parameter.id],
-                                decoration: InputDecoration(
-                                  labelText: parameter
-                                      .unit!.unit_name, // Display unit name
-                                  border: OutlineInputBorder(),
-                                ),
-                                validator: (value) {
-                                  if (value == null || value.isEmpty) {
-                                    return 'Please enter a value for ${parameter.unit!.unit_name}';
-                                  }
-                                  return null;
-                                },
-                              ),
-                            ),
-                          ],
-                        ),
-                      )),
+                  Expanded(
+                    child: TextFormField(
+                      initialValue:
+                          _selectedWaterParameter?.parameter_name ?? "",
+                      readOnly: true,
+                      decoration: const InputDecoration(
+                        labelText: 'Water Parameter',
+                        border: OutlineInputBorder(),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: TextFormField(
+                      controller: _inputValueController,
+                      decoration: InputDecoration(
+                        labelText: _selectedWaterParameterUnit,
+                        border: const OutlineInputBorder(),
+                      ),
+                    ),
+                  ),
                 ],
               ),
               const SizedBox(height: 10),
@@ -886,17 +884,17 @@ class _WaterqualityActivityScreenState
               //Notes
               TextFormField(
                 controller: _notesController,
+                maxLines: 5,
                 decoration: const InputDecoration(
                   labelText: 'Notes',
                   border: OutlineInputBorder(),
                 ),
-                maxLines: null,
               ),
               const SizedBox(height: 10),
 
-              //Submit Button
+              //Update or Cancel row
               Row(
-                mainAxisAlignment: MainAxisAlignment.center,
+                mainAxisAlignment: MainAxisAlignment.start,
                 children: [
                   Expanded(
                     child: ElevatedButton(
@@ -909,18 +907,34 @@ class _WaterqualityActivityScreenState
                       ),
                       onPressed: () {
                         if (_formKey.currentState!.validate()) {
-                          _showConfirmationDialog(purpose: "Submit");
+                          _showConfirmationDialog(purpose: "Update");
                         }
                       },
-                      child: const Text('Submit',
+                      child: const Text('Update',
+                          style: TextStyle(
+                              fontWeight: FontWeight.bold,
+                              color: Colors.white)),
+                    ),
+                  ),
+                  SizedBox(width: 10),
+                  Expanded(
+                    child: ElevatedButton(
+                      style: ElevatedButton.styleFrom(
+                        minimumSize: Size(double.infinity, 50),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(5.0),
+                        ),
+                        backgroundColor: Colors.red,
+                      ),
+                      onPressed: _cancelUpdate,
+                      child: const Text('Cancel',
                           style: TextStyle(
                               fontWeight: FontWeight.bold,
                               color: Colors.white)),
                     ),
                   ),
                 ],
-              ),
-              const SizedBox(height: 20),
+              )
             ],
           ),
         ),

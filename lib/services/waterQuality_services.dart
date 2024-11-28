@@ -54,4 +54,20 @@ class WaterqualityServices {
       throw Exception('Failed to connect to API: $error');
     }
   }
+
+  //update water quality check
+  Future<http.Response> updateWaterQualityCheck(
+      int id, Map<String, dynamic> data) async {
+    var url = Uri.parse('$apiUrl/$id');
+    try {
+      var response = await http.put(
+        url,
+        headers: {"Content-Type": "application/json"},
+        body: jsonEncode(data),
+      );
+      return response;
+    } catch (error) {
+      throw Exception('Failed to connect to API: $error');
+    }
+  }
 }

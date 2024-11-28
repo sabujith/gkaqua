@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:gk_aqua/models/waterQuality.dart';
 import 'package:gk_aqua/screens/activities/WaterQualityActivityScreen.dart';
+import 'package:gk_aqua/screens/activities/WaterQualityActivityUpdateScreen.dart';
 import 'package:gk_aqua/services/waterQuality_services.dart';
 
 class WaterQualityActivityView extends StatelessWidget {
@@ -308,12 +309,14 @@ class WaterQualityDataSource extends DataTableSource {
                 "department_id": item['department_id'],
                 "division_id": item['division_id'],
                 "tank_id": item['tank_id'],
+                "water_parameter_id": item['water_parameter_id'],
+                "input_value": item['input_value'],
                 "notes": item['notes'],
               };
               Navigator.of(context).push(MaterialPageRoute(
                 builder: (context) {
-                  return WaterqualityActivityScreen(
-                      WaterQualityData: updatedData, isEditing: true);
+                  return WaterQualityActivityUpdateScreen(
+                      WaterQualityData: updatedData);
                 },
               ));
             },
