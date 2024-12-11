@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:gk_aqua/Index_Screen.dart';
 import 'package:gk_aqua/models/department.dart';
 import 'package:gk_aqua/models/employee.dart';
 import 'package:gk_aqua/screens/masters/employeeViewMasterScreen.dart';
@@ -86,7 +87,7 @@ class _EmployeeAddState extends State<EmployeeAdd> {
         });
 
         _selectedBloodGrp = widget.employeeData!['blood_group'];
-        _noteController.text = widget.employeeData!['notes'];
+        _noteController.text = widget.employeeData!['notes'] ?? '';
         _startdateController.text = widget.employeeData!['start_date'];
         _enddateController.text = widget.employeeData!['end_date'];
       } else {
@@ -122,20 +123,24 @@ class _EmployeeAddState extends State<EmployeeAdd> {
     try {
       List<Department> fetchedDepartments =
           await departmentService.fetchDepartments();
+
+      if (!mounted) return; // Ensure the widget is still mounted
       setState(() {
         _dept = fetchedDepartments;
       });
     } catch (e) {
+      if (!mounted) return; // Ensure the widget is still mounted
       showDialog(
-          context: context,
-          builder: (BuildContext context) {
-            return SimpleDialog(
-              title: const Text("Error"),
-              children: [
-                Text(e.toString()),
-              ],
-            );
-          });
+        context: context,
+        builder: (BuildContext context) {
+          return SimpleDialog(
+            title: const Text("Error"),
+            children: [
+              Text(e.toString()),
+            ],
+          );
+        },
+      );
     }
   }
 
@@ -170,9 +175,9 @@ class _EmployeeAddState extends State<EmployeeAdd> {
     String employeeMobile = _employeeMobileController.text;
     String employeeAddress = _employeeAddressController.text;
     String bloodGrp = _selectedBloodGrp ?? '';
-    String note = _noteController.text;
-    String startdate = _startdateController.text;
-    String enddate = _enddateController.text;
+    String note = _noteController.text ?? '';
+    String startdate = _startdateController.text ?? '';
+    String enddate = _enddateController.text ?? '';
 
     Map<String, dynamic> requestData = {
       'employee_code': employeeId,
@@ -249,8 +254,8 @@ class _EmployeeAddState extends State<EmployeeAdd> {
       String employeeAddress = _employeeAddressController.text;
       String bloodGrp = _selectedBloodGrp ?? '';
       String note = _noteController.text;
-      String startdate = _startdateController.text;
-      String enddate = _enddateController.text;
+      String startdate = _startdateController.text ?? '';
+      String enddate = _enddateController.text ?? '';
 
       Map<String, dynamic> requestData = {
         'employee_code': employeeId,
@@ -372,6 +377,20 @@ class _EmployeeAddState extends State<EmployeeAdd> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
+        leading: IconButton(
+          icon: const Icon(
+            Icons.arrow_left,
+            color: Colors.white,
+          ),
+          onPressed: () {
+            Navigator.of(context).pushAndRemoveUntil(
+              MaterialPageRoute(
+                builder: (context) => IndexScreen(),
+              ),
+              (Route<dynamic> route) => false, // Remove all previous routes
+            );
+          },
+        ),
         title: Text(
           isEditing ? 'Update Employee' : 'Add Employee',
           style: TextStyle(color: Colors.white),
@@ -858,6 +877,7 @@ class _EmployeeAddState extends State<EmployeeAdd> {
                   ],
                 ),
                 SizedBox(height: 20),
+                //Department and Mobile Row
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
@@ -907,6 +927,7 @@ class _EmployeeAddState extends State<EmployeeAdd> {
                   ],
                 ),
                 SizedBox(height: 20),
+                //Address and Blood Group
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
@@ -954,6 +975,7 @@ class _EmployeeAddState extends State<EmployeeAdd> {
                   ],
                 ),
                 SizedBox(height: 20),
+                //Note Row
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
@@ -974,6 +996,7 @@ class _EmployeeAddState extends State<EmployeeAdd> {
                   ],
                 ),
                 SizedBox(height: 20),
+                //Start Date and End Date
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
@@ -982,12 +1005,6 @@ class _EmployeeAddState extends State<EmployeeAdd> {
                         controller: _startdateController,
                         readOnly: true,
                         onTap: () => _selectDate(context, _startdateController),
-                        validator: (value) {
-                          if (value == null || value.isEmpty) {
-                            return 'Please select a start date';
-                          }
-                          return null;
-                        },
                         decoration: InputDecoration(
                             border: const OutlineInputBorder(),
                             suffixIcon: Icon(Icons.calendar_today),
@@ -1002,12 +1019,6 @@ class _EmployeeAddState extends State<EmployeeAdd> {
                         controller: _enddateController,
                         readOnly: true,
                         onTap: () => _selectDate(context, _enddateController),
-                        validator: (value) {
-                          if (value == null || value.isEmpty) {
-                            return 'Please select a End date';
-                          }
-                          return null;
-                        },
                         decoration: InputDecoration(
                             border: const OutlineInputBorder(),
                             suffixIcon: Icon(Icons.calendar_today),
@@ -1079,9 +1090,7 @@ class _EmployeeAddState extends State<EmployeeAdd> {
                           ),
                         ],
                       ),
-                      const SizedBox(height: 20),
-
-                      
+                const SizedBox(height: 20),
               ],
             )),
       ),

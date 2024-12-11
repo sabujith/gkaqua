@@ -622,12 +622,12 @@ class _WaterqualityActivityScreenState
                                       .unit!.unit_name, // Display unit name
                                   border: OutlineInputBorder(),
                                 ),
-                                validator: (value) {
-                                  if (value == null || value.isEmpty) {
-                                    return 'Please enter a value for ${parameter.unit!.unit_name}';
-                                  }
-                                  return null;
-                                },
+                                // validator: (value) {
+                                //   if (value == null || value.isEmpty) {
+                                //     return 'Please enter a value for ${parameter.unit!.unit_name}';
+                                //   }
+                                //   return null;
+                                // },
                               ),
                             ),
                           ],

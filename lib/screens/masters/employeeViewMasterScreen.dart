@@ -30,12 +30,25 @@ class _EmployeeViewMasterScreenState extends State<EmployeeViewMasterScreen> {
   bool? _isAdmin;
   final TextEditingController _searchController = TextEditingController();
 
+  bool _isLoading = false;
+
   @override
   void initState() {
     super.initState();
-    _fetchEmployees();
-    _getUserDetails();
+    _fetchData();
     _searchController.addListener(_filterEmployees);
+  }
+
+  Future<void> _fetchData() async {
+    setState(() {
+      _isLoading = true;
+    });
+
+    await _fetchEmployees(context);
+    await _getUserDetails();
+    setState(() {
+      _isLoading = false;
+    });
   }
 
   Future<void> _getUserDetails() async {
@@ -45,16 +58,34 @@ class _EmployeeViewMasterScreenState extends State<EmployeeViewMasterScreen> {
     });
   }
 
-  Future<void> _fetchEmployees() async {
+  Future<void> _fetchEmployees(BuildContext context) async {
     EmployeeServices employeeServices = EmployeeServices();
     try {
       List<dynamic> employees = await employeeServices.fetchEmployees();
-      setState(() {
-        employeesDet = employees;
-        filteredEmployees = employees; // Initialize filtered list
-      });
+      if (mounted) {
+        setState(() {
+          employeesDet = employees;
+          filteredEmployees = employeesDet;
+        });
+      }
     } catch (e) {
-      _showErrorDialog(e.toString());
+      if (mounted) {
+        showDialog(
+          context: context,
+          builder: (BuildContext context) {
+            return AlertDialog(
+              title: const Text('Error'),
+              content: Text(e.toString()),
+              actions: [
+                TextButton(
+                  child: const Text('Close'),
+                  onPressed: () => Navigator.of(context).pop(),
+                ),
+              ],
+            );
+          },
+        );
+      }
     }
   }
 
@@ -101,67 +132,88 @@ class _EmployeeViewMasterScreenState extends State<EmployeeViewMasterScreen> {
     return Scaffold(
       appBar: AppBar(
         backgroundColor: Colors.blue,
+        leading: IconButton(
+          icon: const Icon(
+            Icons.menu,
+            color: Colors.white,
+          ),
+          //back one screen
+          onPressed: () => Navigator.of(context).pop(),
+        ),
         title: const Text('Employee View'),
       ),
-      body: Column(
-        children: [
-          SizedBox(height: 20),
-          //search bar
-          SizedBox(
-            width: 200,
-            child: TextField(
-              controller: _searchController,
-              decoration: const InputDecoration(
-                labelText: 'Search',
-                prefixIcon: Icon(Icons.search),
-                border: OutlineInputBorder(),
-              ),
-            ),
-          ),
-          const SizedBox(height: 20),
-
-          //data table
-          employeesDet.length == 0
-              ? Center(child: Text('No Data'))
-              : Center(
-                  child: SizedBox(
-                    width: 1500,
-                    child: PaginatedDataTable(
-                      header: Center(child: Text('User ID: $_userId')),
-                      columns: const [
-                        DataColumn(label: Text('Name')),
-                        DataColumn(label: Text('Code')),
-                        DataColumn(label: Text('Department')),
-                        DataColumn(label: Text('Actions')),
-                      ],
-                      source: _EmployeeDataSource(
-                        context: context,
-                        employees: filteredEmployees,
-                        isAdmin: _isAdmin ?? false,
-                        deleteEmployee: _deleteEmployee,
-                      ),
-                      rowsPerPage: 5,
+      body: _isLoading
+          ? const Center(child: CircularProgressIndicator())
+          : Column(
+              children: [
+                SizedBox(height: 20),
+                //search bar
+                SizedBox(
+                  width: 200,
+                  child: TextField(
+                    controller: _searchController,
+                    decoration: const InputDecoration(
+                      labelText: 'Search',
+                      prefixIcon: Icon(Icons.search),
+                      border: OutlineInputBorder(),
                     ),
                   ),
                 ),
-        ],
-      ),
+                const SizedBox(height: 20),
+
+                //data table
+                employeesDet.length == 0
+                    ? Center(child: Text('No Employee Data'))
+                    : Center(
+                        child: SizedBox(
+                          width: 1500,
+                          child: PaginatedDataTable(
+                            header: Center(child: Text('User ID: $_userId')),
+                            columns: const [
+                              DataColumn(label: Text('Name')),
+                              DataColumn(label: Text('Code')),
+                              DataColumn(label: Text('Department')),
+                              DataColumn(label: Text('Actions')),
+                            ],
+                            source: _EmployeeDataSource(
+                              context: context,
+                              employees: filteredEmployees,
+                              isAdmin: _isAdmin ?? false,
+                              deleteEmployee: _deleteEmployee,
+                            ),
+                            rowsPerPage: 5,
+                          ),
+                        ),
+                      ),
+              ],
+            ),
     );
   }
 
   Future<void> _deleteEmployee(int index) async {
-    final employee = filteredEmployees[index];
+    if (index < 0 || index >= filteredEmployees.length) {
+      return; // Prevent invalid indices
+    }
+
+    final Map<String, dynamic> employee = filteredEmployees[index];
     int? employeeId = employee['id'];
-    setState(() {
-      employeesDet.remove(employee);
-      filteredEmployees.removeAt(index);
-    });
 
     try {
-      await EmployeeServices().deleteEmployee(employeeId!);
-      _fetchEmployees();
+      EmployeeServices employeeServices = EmployeeServices();
+      await employeeServices.deleteEmployee(employeeId!);
+
+      setState(() {
+        filteredEmployees.removeAt(index);
+        employeesDet.remove(employee);
+      });
+
+      _fetchEmployees(context);
     } catch (e) {
       _showErrorDialog(e.toString());
+
+      setState(() {
+        filteredEmployees = List.from(employeesDet);
+      });
     }
   }
 }
