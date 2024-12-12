@@ -41,17 +41,20 @@ class _LarvaeCollectionActivityScreenState
   TankModel? _selectedHatching1Tank;
   final TextEditingController _hatching1BatchController =
       TextEditingController();
+  final TextEditingController _hatching1LarvaeCount = TextEditingController();
 
   Department? _selectedHatching2Department;
   DivisionModel? _selectedHatching2Division;
   TankModel? _selectedHatching2Tank;
   final TextEditingController _hatching2BatchController =
       TextEditingController();
+  final TextEditingController _hatching2LarvaeCount = TextEditingController();
 
   Department? _selectedTargetDepartment;
   DivisionModel? _selectedTargetDivision;
   TankModel? _selectedTargetTank;
   final TextEditingController _targetBatchController = TextEditingController();
+  final TextEditingController _targetLarvaeCount = TextEditingController();
 
   final TextEditingController _countController = TextEditingController();
   final TextEditingController _countMuliplierController =
@@ -81,6 +84,9 @@ class _LarvaeCollectionActivityScreenState
     // Add listeners to the text fields to calculate the total count on input change
     _countController.addListener(_calculateTotalCount);
     _countMuliplierController.addListener(_calculateTotalCount);
+
+    _hatching1LarvaeCount.addListener(_calculateTargetCount);
+    _hatching2LarvaeCount.addListener(_calculateTargetCount);
   }
 
   void _fetchData() async {
@@ -342,6 +348,18 @@ class _LarvaeCollectionActivityScreenState
 
     setState(() {
       _totalCountController.text = totalCount.toString();
+    });
+  }
+
+  // Function to add Tank 1 count and Tank 2 count to get Target count
+  void _calculateTargetCount() {
+    int tank1Count = int.tryParse(_hatching1LarvaeCount.text) ?? 0;
+    int tank2Count = int.tryParse(_hatching2LarvaeCount.text) ?? 0;
+    int targetCount = tank1Count + tank2Count;
+
+    setState(() {
+      _targetLarvaeCount.text = targetCount.toString();
+      _countController.text = targetCount.toString();
     });
   }
 
@@ -872,6 +890,22 @@ class _LarvaeCollectionActivityScreenState
                               }
                               return null;
                             },
+                          ),
+                          const SizedBox(height: 10),
+
+                          //Larvae 1 Quantity
+                          TextFormField(
+                            controller: _hatching1LarvaeCount,
+                            decoration: const InputDecoration(
+                              labelText: 'Tank 1 Larvae Quantity',
+                              border: OutlineInputBorder(),
+                            ),
+                            validator: (value) {
+                              if (value == null || value.isEmpty) {
+                                return 'Please enter a quantity';
+                              }
+                              return null;
+                            },
                           )
                         ],
                       ),
@@ -1009,6 +1043,22 @@ class _LarvaeCollectionActivityScreenState
                             validator: (value) {
                               if (value == null || value.isEmpty) {
                                 return 'Please enter a batch';
+                              }
+                              return null;
+                            },
+                          ),
+                          const SizedBox(height: 10),
+
+                          //Larvae 1 Quantity
+                          TextFormField(
+                            controller: _hatching2LarvaeCount,
+                            decoration: const InputDecoration(
+                              labelText: 'Tank 2 Larvae Quantity',
+                              border: OutlineInputBorder(),
+                            ),
+                            validator: (value) {
+                              if (value == null || value.isEmpty) {
+                                return 'Please enter a quantity';
                               }
                               return null;
                             },
@@ -1150,6 +1200,23 @@ class _LarvaeCollectionActivityScreenState
                               }
                               return null;
                             },
+                          ),
+                          const SizedBox(height: 10),
+
+                          // Target Tank Larvae
+                          TextFormField(
+                            readOnly: true,
+                            controller: _targetLarvaeCount,
+                            decoration: const InputDecoration(
+                              labelText: 'Total Larvae Quantity',
+                              border: OutlineInputBorder(),
+                            ),
+                            validator: (value) {
+                              if (value == null || value.isEmpty) {
+                                return 'Please enter a quantity';
+                              }
+                              return null;
+                            },
                           )
                         ],
                       ),
@@ -1166,6 +1233,7 @@ class _LarvaeCollectionActivityScreenState
                   Expanded(
                     child: // Larva Count
                         TextFormField(
+                      readOnly: true,
                       controller: _countController,
                       keyboardType: TextInputType.number,
                       decoration: const InputDecoration(
@@ -1216,7 +1284,7 @@ class _LarvaeCollectionActivityScreenState
                 ],
               ),
               //label
-              Row(
+              const Row(
                 children: [
                   Expanded(
                     child: Text('Count in Spoons'),
@@ -1454,58 +1522,82 @@ class _LarvaeCollectionActivityScreenState
                     const SizedBox(height: 10),
 
                     //Tank 1 and Batch 1 Row
-                    Row(children: [
-                      //Tank 1 Dropdown
-                      Expanded(
-                        child: DropdownButtonFormField<TankModel>(
-                          value: hatching1Tanks
-                                  .contains(_selectedHatching1Division)
-                              ? _selectedHatching1Tank
-                              : null,
-                          onChanged: (TankModel? newValue) {
-                            setState(() {
-                              _selectedHatching1Tank = newValue;
-                            });
-                          },
-                          items: hatching1Tanks
-                              .map<DropdownMenuItem<TankModel>>(
-                                  (TankModel tank) {
-                            return DropdownMenuItem<TankModel>(
-                              value: tank,
-                              child: Text(tank.tank_name ?? ''),
-                            );
-                          }).toList(),
-                          validator: (value) {
-                            if (value == null) {
-                              return 'Please select a tank';
-                            }
-                            return null;
-                          },
-                          decoration: const InputDecoration(
-                            labelText: 'Hatching 1 Tank',
-                            border: OutlineInputBorder(),
+                    Row(
+                      children: [
+                        //Tank 1 Dropdown
+                        Expanded(
+                          child: DropdownButtonFormField<TankModel>(
+                            value: hatching1Tanks
+                                    .contains(_selectedHatching1Division)
+                                ? _selectedHatching1Tank
+                                : null,
+                            onChanged: (TankModel? newValue) {
+                              setState(() {
+                                _selectedHatching1Tank = newValue;
+                              });
+                            },
+                            items: hatching1Tanks
+                                .map<DropdownMenuItem<TankModel>>(
+                                    (TankModel tank) {
+                              return DropdownMenuItem<TankModel>(
+                                value: tank,
+                                child: Text(tank.tank_name ?? ''),
+                              );
+                            }).toList(),
+                            validator: (value) {
+                              if (value == null) {
+                                return 'Please select a tank';
+                              }
+                              return null;
+                            },
+                            decoration: const InputDecoration(
+                              labelText: 'Hatching 1 Tank',
+                              border: OutlineInputBorder(),
+                            ),
                           ),
                         ),
-                      ),
-                      const SizedBox(width: 10),
+                        const SizedBox(width: 10),
 
-                      //Hatching 1 Batch
-                      Expanded(
-                        child: TextFormField(
-                          controller: _hatching1BatchController,
-                          decoration: const InputDecoration(
-                            labelText: 'Hatching 1 Batch',
-                            border: OutlineInputBorder(),
+                        //Hatching 1 Batch
+                        Expanded(
+                          child: TextFormField(
+                            controller: _hatching1BatchController,
+                            decoration: const InputDecoration(
+                              labelText: 'Hatching 1 Batch',
+                              border: OutlineInputBorder(),
+                            ),
+                            validator: (value) {
+                              if (value == null || value.isEmpty) {
+                                return 'Please enter a batch';
+                              }
+                              return null;
+                            },
                           ),
-                          validator: (value) {
-                            if (value == null || value.isEmpty) {
-                              return 'Please enter a batch';
-                            }
-                            return null;
-                          },
-                        ),
-                      )
-                    ])
+                        )
+                      ],
+                    ),
+                    const SizedBox(height: 10),
+
+                    //Larvae 1 Quantity
+                    Row(
+                      children: [
+                        Expanded(
+                          child: TextFormField(
+                            controller: _hatching1LarvaeCount,
+                            decoration: const InputDecoration(
+                              labelText: 'Tank 1 Larvae Quantity',
+                              border: OutlineInputBorder(),
+                            ),
+                            validator: (value) {
+                              if (value == null || value.isEmpty) {
+                                return 'Please enter a quantity';
+                              }
+                              return null;
+                            },
+                          ),
+                        )
+                      ],
+                    )
                   ],
                 ),
               ),
@@ -1657,85 +1749,33 @@ class _LarvaeCollectionActivityScreenState
                           ),
                         )
                       ],
+                    ),
+                    const SizedBox(height: 10),
+
+                    //Larvae 2 Quantity
+                    Row(
+                      children: [
+                        Expanded(
+                          child: TextFormField(
+                            controller: _hatching2LarvaeCount,
+                            decoration: const InputDecoration(
+                              labelText: 'Tank 2 Larvae Quantity',
+                              border: OutlineInputBorder(),
+                            ),
+                            validator: (value) {
+                              if (value == null || value.isEmpty) {
+                                return 'Please enter a quantity';
+                              }
+                              return null;
+                            },
+                          ),
+                        )
+                      ],
                     )
                   ],
                 ),
               ),
-              const SizedBox(height: 20),
-
-              // Larvae Count, Count Multiplier and Total count Row
-              Row(
-                crossAxisAlignment: CrossAxisAlignment.center,
-                children: [
-                  Expanded(
-                    child: // Larva Count
-                        TextFormField(
-                      controller: _countController,
-                      keyboardType: TextInputType.number,
-                      decoration: const InputDecoration(
-                          border: OutlineInputBorder(),
-                          labelText: 'Larvae Count'),
-                      validator: (value) {
-                        if (value == null || value.isEmpty) {
-                          return 'Please enter Larvae Count';
-                        }
-                        return null;
-                      },
-                    ),
-                  ),
-                  Text(' x ', style: TextStyle(fontSize: 20)),
-                  Expanded(
-                    child: TextFormField(
-                      controller: _countMuliplierController,
-                      keyboardType: TextInputType.number,
-                      decoration: const InputDecoration(
-                          border: OutlineInputBorder(),
-                          labelText: 'Count Multiplier'),
-                      validator: (value) {
-                        if (value == null || value.isEmpty) {
-                          return 'Please enter Count Multiplier';
-                        }
-                        return null;
-                      },
-                    ),
-                  ),
-                  Text(' = ', style: TextStyle(fontSize: 20)),
-                  Expanded(
-                    child: //total count
-                        TextFormField(
-                      controller: _totalCountController,
-                      readOnly: true,
-                      keyboardType: TextInputType.number,
-                      decoration: const InputDecoration(
-                          border: OutlineInputBorder(),
-                          labelText: 'Total Count'),
-                      validator: (value) {
-                        if (value == null || value.isEmpty) {
-                          return 'Please enter Total Count';
-                        }
-                        return null;
-                      },
-                    ),
-                  )
-                ],
-              ),
-              //label
-              const Row(
-                children: [
-                  Expanded(
-                    child: Text('Count in Spoons'),
-                  ),
-                  SizedBox(width: 20),
-                  Expanded(
-                    child: Text('Count per Spoon'),
-                  ),
-                  SizedBox(width: 20),
-                  Expanded(
-                    child: Text('Total Count'),
-                  ),
-                ],
-              ),
-              SizedBox(height: 20),
+              const SizedBox(height: 10),
 
               //Target Details container
               Container(
@@ -1885,11 +1925,108 @@ class _LarvaeCollectionActivityScreenState
                           ),
                         )
                       ],
+                    ),
+                    const SizedBox(height: 10),
+
+                    // Target Tank Larvae
+                    Row(
+                      children: [
+                        Expanded(
+                          child: TextFormField(
+                            readOnly: true,
+                            controller: _targetLarvaeCount,
+                            decoration: const InputDecoration(
+                              labelText: 'Total Larvae Quantity',
+                              border: OutlineInputBorder(),
+                            ),
+                            validator: (value) {
+                              if (value == null || value.isEmpty) {
+                                return 'Please enter a quantity';
+                              }
+                              return null;
+                            },
+                          ),
+                        ),
+                      ],
                     )
                   ],
                 ),
               ),
               const SizedBox(height: 10),
+
+              // Larvae Count, Count Multiplier and Total count Row
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  Expanded(
+                    child: // Larva Count
+                        TextFormField(
+                      controller: _countController,
+                      keyboardType: TextInputType.number,
+                      decoration: const InputDecoration(
+                          border: OutlineInputBorder(),
+                          labelText: 'Larvae Count'),
+                      validator: (value) {
+                        if (value == null || value.isEmpty) {
+                          return 'Please enter Larvae Count';
+                        }
+                        return null;
+                      },
+                    ),
+                  ),
+                  Text(' x ', style: TextStyle(fontSize: 20)),
+                  Expanded(
+                    child: TextFormField(
+                      controller: _countMuliplierController,
+                      keyboardType: TextInputType.number,
+                      decoration: const InputDecoration(
+                          border: OutlineInputBorder(),
+                          labelText: 'Count Multiplier'),
+                      validator: (value) {
+                        if (value == null || value.isEmpty) {
+                          return 'Please enter Count Multiplier';
+                        }
+                        return null;
+                      },
+                    ),
+                  ),
+                  Text(' = ', style: TextStyle(fontSize: 20)),
+                  Expanded(
+                    child: //total count
+                        TextFormField(
+                      controller: _totalCountController,
+                      readOnly: true,
+                      keyboardType: TextInputType.number,
+                      decoration: const InputDecoration(
+                          border: OutlineInputBorder(),
+                          labelText: 'Total Count'),
+                      validator: (value) {
+                        if (value == null || value.isEmpty) {
+                          return 'Please enter Total Count';
+                        }
+                        return null;
+                      },
+                    ),
+                  )
+                ],
+              ),
+              //label
+              const Row(
+                children: [
+                  Expanded(
+                    child: Text('Count in Spoons'),
+                  ),
+                  SizedBox(width: 20),
+                  Expanded(
+                    child: Text('Count per Spoon'),
+                  ),
+                  SizedBox(width: 20),
+                  Expanded(
+                    child: Text('Total Count'),
+                  ),
+                ],
+              ),
+              SizedBox(height: 20),
 
               //notes
               TextFormField(
@@ -2097,6 +2234,22 @@ class _LarvaeCollectionActivityScreenState
                         }
                         return null;
                       },
+                    ),
+                    const SizedBox(height: 10),
+
+                    //Larvae 1 Quantity
+                    TextFormField(
+                      controller: _hatching1LarvaeCount,
+                      decoration: const InputDecoration(
+                        labelText: 'Tank 1 Larvae Quantity',
+                        border: OutlineInputBorder(),
+                      ),
+                      validator: (value) {
+                        if (value == null || value.isEmpty) {
+                          return 'Please enter a quantity';
+                        }
+                        return null;
+                      },
                     )
                   ],
                 ),
@@ -2231,79 +2384,27 @@ class _LarvaeCollectionActivityScreenState
                         }
                         return null;
                       },
+                    ),
+                    const SizedBox(height: 10),
+
+                    //Larvae 2 Quantity
+                    TextFormField(
+                      controller: _hatching2LarvaeCount,
+                      decoration: const InputDecoration(
+                        labelText: 'Tank 2 Larvae Quantity',
+                        border: OutlineInputBorder(),
+                      ),
+                      validator: (value) {
+                        if (value == null || value.isEmpty) {
+                          return 'Please enter a quantity';
+                        }
+                        return null;
+                      },
                     )
                   ],
                 ),
               ),
               const SizedBox(height: 20),
-
-              // Larvae Count and Count Multiplier
-              Row(
-                children: [
-                  // Larva Count
-                  Expanded(
-                    child: TextFormField(
-                      controller: _countController,
-                      keyboardType: TextInputType.number,
-                      decoration: const InputDecoration(
-                          border: OutlineInputBorder(),
-                          labelText: 'Larvae Count'),
-                      validator: (value) {
-                        if (value == null || value.isEmpty) {
-                          return 'Please enter Larvae Count';
-                        }
-                        return null;
-                      },
-                    ),
-                  ),
-                  Text(' x ', style: TextStyle(fontSize: 20)),
-                  // Count Multiplier
-                  Expanded(
-                    child: TextFormField(
-                      controller: _countMuliplierController,
-                      keyboardType: TextInputType.number,
-                      decoration: const InputDecoration(
-                          border: OutlineInputBorder(),
-                          labelText: 'Count Multiplier'),
-                      validator: (value) {
-                        if (value == null || value.isEmpty) {
-                          return 'Please enter Count Multiplier';
-                        }
-                        return null;
-                      },
-                    ),
-                  )
-                ],
-              ),
-              //label
-              const Row(
-                children: [
-                  Expanded(
-                    child: Text('Count in Spoons'),
-                  ),
-                  SizedBox(width: 20),
-                  Expanded(
-                    child: Text('Count per Spoon'),
-                  ),
-                ],
-              ),
-              SizedBox(height: 10),
-
-              //total count
-              TextFormField(
-                controller: _totalCountController,
-                readOnly: true,
-                keyboardType: TextInputType.number,
-                decoration: const InputDecoration(
-                    border: OutlineInputBorder(), labelText: 'Total Count'),
-                validator: (value) {
-                  if (value == null || value.isEmpty) {
-                    return 'Please enter Total Count';
-                  }
-                  return null;
-                },
-              ),
-              SizedBox(height: 20),
 
               //Target Details container
               Container(
@@ -2432,11 +2533,96 @@ class _LarvaeCollectionActivityScreenState
                         }
                         return null;
                       },
+                    ),
+                    const SizedBox(height: 10),
+
+                    // Target Tank Larvae
+                    TextFormField(
+                      readOnly: true,
+                      controller: _targetLarvaeCount,
+                      decoration: const InputDecoration(
+                        labelText: 'Total Larvae Quantity',
+                        border: OutlineInputBorder(),
+                      ),
+                      validator: (value) {
+                        if (value == null || value.isEmpty) {
+                          return 'Please enter a quantity';
+                        }
+                        return null;
+                      },
                     )
                   ],
                 ),
               ),
               const SizedBox(height: 10),
+
+              // Larvae Count and Count Multiplier
+              Row(
+                children: [
+                  // Larva Count
+                  Expanded(
+                    child: TextFormField(
+                      controller: _countController,
+                      keyboardType: TextInputType.number,
+                      decoration: const InputDecoration(
+                          border: OutlineInputBorder(),
+                          labelText: 'Larvae Count'),
+                      validator: (value) {
+                        if (value == null || value.isEmpty) {
+                          return 'Please enter Larvae Count';
+                        }
+                        return null;
+                      },
+                    ),
+                  ),
+                  Text(' x ', style: TextStyle(fontSize: 20)),
+                  // Count Multiplier
+                  Expanded(
+                    child: TextFormField(
+                      controller: _countMuliplierController,
+                      keyboardType: TextInputType.number,
+                      decoration: const InputDecoration(
+                          border: OutlineInputBorder(),
+                          labelText: 'Count Multiplier'),
+                      validator: (value) {
+                        if (value == null || value.isEmpty) {
+                          return 'Please enter Count Multiplier';
+                        }
+                        return null;
+                      },
+                    ),
+                  )
+                ],
+              ),
+              //label
+              const Row(
+                children: [
+                  Expanded(
+                    child: Text('Count in Spoons'),
+                  ),
+                  SizedBox(width: 20),
+                  Expanded(
+                    child: Text('Count per Spoon'),
+                  ),
+                ],
+              ),
+              SizedBox(height: 10),
+
+              //total count
+              TextFormField(
+                controller: _totalCountController,
+                readOnly: true,
+                keyboardType: TextInputType.number,
+                decoration: const InputDecoration(
+                    border: OutlineInputBorder(), labelText: 'Total Count'),
+                validator: (value) {
+                  if (value == null || value.isEmpty) {
+                    return 'Please enter Total Count';
+                  }
+                  return null;
+                },
+              ),
+              SizedBox(height: 20),
 
               //notes
               TextFormField(
